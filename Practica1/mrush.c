@@ -6,7 +6,7 @@
 #include <time.h>
 #include "pow.h"
 
-#define MAX POW_LIMIT
+#define MAX POW_LIMIT-1
 #define MAX_HILOS 10
 
 typedef struct
