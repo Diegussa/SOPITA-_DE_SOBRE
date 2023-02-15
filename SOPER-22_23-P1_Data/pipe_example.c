@@ -1,61 +1,47 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/types.h>
-#include <sys/wait.h>
+#include <fcntl.h>
 #include <unistd.h>
-
-int main(void) {
-  int fd[2];
-
-  const char *string = "Hi all!\n";
-  char readbuffer[80];
-  int pipe_status;
-  pid_t childpid;
-  ssize_t nbytes;
-
-  pipe_status = pipe(fd);
-  if (pipe_status == -1) {
-    perror("pipe");
-    exit(EXIT_FAILURE);
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+ 
+#define SIZE 512
+ 
+int main( int argc, char **argv )
+{
+  pid_t pid;
+  int a[2], b[2], readbytes;
+  char buffer[SIZE];
+ 
+  pipe( a );
+  pipe( b );
+ 
+  if ( (pid=fork()) == 0 )
+  { // hijo
+    close( a[1] ); /* cerramos el lado de escritura del pipe */
+    close( b[0] ); /* cerramos el lado de lectura del pipe */
+ 
+    while( (readbytes=read( a[0], buffer, SIZE ) ) > 0)
+      write( 1, buffer, readbytes );
+    close( a[0] );
+ 
+    strcpy( buffer, "Soy tu hijo hablandote por la otra tuberia.\n" );
+    write( b[1], buffer, strlen( buffer ) );
+    close( b[1] );
   }
-
-  childpid = fork();
-  if (childpid == -1) {
-    perror("fork");
-    exit(EXIT_FAILURE);
+  else
+  { // padre
+    close( a[0] ); /* cerramos el lado de lectura del pipe */
+    close( b[1] ); /* cerramos el lado de escritura del pipe */
+ 
+    strcpy( buffer, "Soy tu padre hablandote por una tuberia.\n" );
+    write( a[1], buffer, strlen( buffer ) );
+    close( a[1]);
+ 
+    while( (readbytes=read( b[0], buffer, SIZE )) > 0)
+      write( 1, buffer, readbytes );
+    close( b[0]);
   }
-
-  if (childpid == 0) {
-    /* Close of the read end in the child. */
-    close(fd[0]);
-    /* The message is written in the write end. */
-    /* strlen(string) + 1 < PIPE_BUF, there are no short writes. */
-    nbytes = write(fd[1], string, strlen(string) + 1);
-    if (nbytes == -1) {
-      perror("write");
-      exit(EXIT_FAILURE);
-    }
-    printf("I have written in the pipe\n");
-
-    exit(EXIT_SUCCESS);
-  } else {
-    /* Close of the write end in the parent. */
-    close(fd[1]);
-    /* The message is read. */
-    nbytes = 0;
-    do {
-      nbytes = read(fd[0], readbuffer, sizeof(readbuffer));
-      if (nbytes == -1) {
-        perror("read");
-        exit(EXIT_FAILURE);
-      }
-      if (nbytes > 0) {
-        printf("I have received the string: %.*s", (int)nbytes, readbuffer);
-      }
-    } while (nbytes != 0);
-
-    wait(NULL);
-    exit(EXIT_SUCCESS);
-  }
+  waitpid( pid, NULL, 0 );
+  exit( 0 );
 }
