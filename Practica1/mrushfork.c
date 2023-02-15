@@ -16,10 +16,12 @@ typedef struct
 
 void *func_minero(void *arg);
 
-int monitor();
+int monitor(int pipeLectura, int pipeEscritura);
 
-long minero(int nHilos, long busq);
+long minero(int nHilos,long nbusquedas, long busq);
 
+
+long minar(int nHilos,long nbusquedas, long busq, int pipeLectura,int pipeEscritura);
 int main(int argc, char *argv[])
 {
     int rc[MAX_HILOS], t1, t2, i,newpid;
@@ -39,11 +41,13 @@ int main(int argc, char *argv[])
     if(newpid){
             wait(); /*Aqui va el código que realiza el padre*/
     }else{
-        for (i = 0; i < atoi(argv[2]); i++)
-        {
-            solucion = minero(atoi(argv[3]), busq);
+       
+        busq = minero(atoi(argv[3]),atoi(argv[2]), busq); /*Queremos que minero devuelve el proximo numero a buscar*/
+            
+            
+            /*Esto no hace falta ponerlo ya que esta tarea la realiza el proceso monitor*/
 
-            /*Impresion de la solucion*/
+            /* 
             if (pow_hash(solucion) == busq)
             {
                 printf("\nSolution accepted: %08ld --> %08ld", busq, solucion);
@@ -56,8 +60,8 @@ int main(int argc, char *argv[])
                 printf("\nMiner exited with status 0");
                 return 1;
             }
-            busq=solucion;
-        } 
+            busq=solucion;*/
+    
     }
     
 
@@ -87,18 +91,80 @@ void *func_minero(void *arg)
     pthread_exit((void *)x);
 }
 
-long minero(int nHilos, long busq)
+long minero(int nHilos, long nbusquedas, long busq)
 {
-    int i, rc[MAX_HILOS],newpid;
+    int newpid,status, pipeMon_min[2], pipeMin_mon[2];
+    /*Creacion del proceso monitor*/
+    status = pipe(pipeMon_min);
+    if (status == -1)
+    {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+    status = pipe(pipeMin_mon);
+    if (status == -1)
+    {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+    newpid=fork();
+    if(newpid){
+        /*Funcion que crea todos los hilos*/
+        close(pipeMon_min[1]);
+        close(pipeMin_mon[0]);
+        if(minar(nHilos,nbusquedas,busq,pipeMon_min[0],pipeMin_mon[1])==0){
+            return -1;
+        }
+        
+    }else{
+        /*Código del hijo, monitor*/
+        close(pipeMin_mon[1]);
+        close(pipeMon_min[0]);
+        monitor(pipeMin_mon[0],pipeMon_min[1]);
+    }
+   
+}
+
+int monitor(int pipeLectura, int pipeEscritura){
+    int solucion,busq, nbytes, parSol[2];
+    /*Es necesario leer de la tubería la solucion y el numero a buscar */
+    /*Creacion del fork monitor-terminal*/
+    
+    /*Impresion de la solucion*/
+    /*Cierre de lectura al final de en el hijo */
+        do
+        {
+            nbytes = read(pipeLectura, &parSol, sizeof(int)*2);
+            if (nbytes == -1)
+            {
+                perror("read");
+                exit(EXIT_FAILURE);
+            }
+        } while (nbytes != 0);
+        solucion = parSol[0];
+        busq = parSol[1];
+        if(pow_hash(busq)==solucion){
+            printf("\nSolution accepted: %08ld --> %08ld", busq, solucion);
+        }
+        else{
+            printf("\nSolution rejected: %08ld !-> %08ld", busq, solucion);
+            printf("\nThe soluction has been invalidated");
+            printf("\nMonitor exited with status 0");
+            printf("\nMiner exited with status 0");
+        }
+        /*Comunicar al minero que*/
+    
+}
+
+long minar(int nHilos,long nbusquedas, long busq, int pipeLectura,int pipeEscritura){
+    int i,j, rc[MAX_HILOS],parSol[2],nbytes;
     entradaHash t[MAX_HILOS];
     long solucion;
     pthread_t threads[MAX_HILOS];
     void *sol[MAX_HILOS];
-    /*Creacion del proceso monitor*/
-    newpid=fork();
-    if(newpid){
-        /*El padre se pone ha hacer hilos para solucionar el problema*/
-         /*Creacion de los hilos*/
+
+    for ( j = 0 ; j < nbusquedas ; j++)
+    {
         for (i = 0; i < nHilos; i++)
         {
             t[i].ep = ((long)MAX / nHilos) * i;
@@ -109,10 +175,9 @@ long minero(int nHilos, long busq)
             if (rc[i])
             {
                 printf("Error creando el hilo %d", i);
-                return 1;
+                return -1;
             }
         }
-
         /*Joins de los hilos*/
         for (i = 0; i < nHilos; i++)
         {
@@ -123,36 +188,26 @@ long minero(int nHilos, long busq)
                 return -1;
             }
         }
-
         for (i = 0; i < nHilos; i++)
         {
             if((long)sol[i]!=-1){
                 solucion = (long)sol[i];
             }
         }
-            /*Código de comunicación de la solucion al proceso hijo (monitor)*/
-            busq=solucion;
-    }else{
-        /*Código del hijo, monitor*/
-        monitor();
+        parSol[0]=solucion;
+        parSol[1]=busq;
+        do
+        {
+            nbytes = write(pipeEscritura, &parSol, sizeof(int)*2);
+            if (nbytes == -1)
+            {
+                perror("read");
+                exit(EXIT_FAILURE);
+            }
+        } while (nbytes != 0);
+        /*Código de comunicación de la solucion al proceso hijo (monitor)*/
+        busq=solucion;
+        /*Comprobar que es correcto*/
     }
-   
-}
-
-int monitor(){
-    int solucion,busq;
-    /*Es necesario leer de la tubería la solucion y el numero a buscar */
-    /*Impresion de la solucion*/
-            if (pow_hash(solucion) == busq)
-            {
-                printf("\nSolution accepted: %08ld --> %08ld", busq, solucion);
-            }
-            else
-            {
-                printf("\nSolution rejected: %08ld !-> %08ld", busq, solucion);
-                printf("\nThe soluction has been invalidated");
-                printf("\nMonitor exited with status 0");
-                printf("\nMiner exited with status 0");
-                return 1;
-            }
+    return 0;     
 }

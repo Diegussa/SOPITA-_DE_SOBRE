@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
 {
     int rc[MAX_HILOS], t1, t2, i;
     long solucion, busq;
+    
 
     /*Control de errores*/
     t1 = clock();
@@ -80,54 +81,13 @@ void *func_minero(void *arg)
 
 long minero(int nHilos, long busq)
 {
-    int i, rc[MAX_HILOS], status, pipeCH[2], nbytes, parSol[2];
+    int i, rc[MAX_HILOS];
     entradaHash t[MAX_HILOS];
     pthread_t threads[MAX_HILOS];
     void *sol[MAX_HILOS];
-    pid_t childpid;
 
-    /*Creacion del fork monitor-terminal*/
-    status = pipe(pipeCH);
-    if (status == -1)
-    {
-        perror("pipe");
-        exit(EXIT_FAILURE);
-    }
 
-    childpid = fork(); /*0 si es el hijo y pid del hijo en el caso del padre*/
-
-    if (childpid == -1)
-    { /*Control de errores*/
-        perror("fork");
-        exit(EXIT_FAILURE);
-    }
-    else if (childpid == 0) /*Caso hijo (terminal)*/
-    {
-        /*Cierre de lectura al final de en el hijo */
-        close(fd[0]);
-        do
-        {
-            nbytes = read(fd[0], &parSol, sizeof(int)*2);
-            if (nbytes == -1)
-            {
-                perror("read");
-                exit(EXIT_FAILURE);
-            }
-        } while (nbytes != 0);
-        
-        if(pow_hash(parSol[0])==parSol[1]){
-            printf("\nSolution accepted: %08ld --> %08ld", parSol[1], parSol[0]);
-        }
-        else{
-            printf("\nSolution rejected: %08ld !-> %08ld", parSol[1], parSol[0]);
-            printf("\nThe soluction has been invalidated");
-            exit(EXIT_FAILURE);
-        }
-    }
-    else
-    { /*Caso padre (minero)*/
-    }
-
+    
     /*Creacion de los hilos*/
     for (i = 0; i < nHilos; i++)
     {
