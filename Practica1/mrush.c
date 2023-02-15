@@ -6,7 +6,7 @@
 #include <time.h>
 #include "pow.h"
 
-#define MAX POW_LIMIT-1
+#define MAX POW_LIMIT - 1
 #define MAX_HILOS 10
 
 typedef struct
@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
 {
     int rc[MAX_HILOS], t1, t2, i;
     long solucion, busq;
+    
 
     /*Control de errores*/
     t1 = clock();
@@ -50,9 +51,8 @@ int main(int argc, char *argv[])
             printf("\nMiner exited with status 0");
             return 1;
         }
-        busq=solucion;
+        busq = solucion;
     }
-
 
     t2 = clock();
     printf("\nTime spent %d\n", t2 - t1);
@@ -81,11 +81,34 @@ void *func_minero(void *arg)
 
 long minero(int nHilos, long busq)
 {
-    int i, rc[MAX_HILOS];
+    int i, rc[MAX_HILOS], status, pipeCH[2];
     entradaHash t[MAX_HILOS];
     pthread_t threads[MAX_HILOS];
     void *sol[MAX_HILOS];
+    pid_t childpid;
 
+    /*Creacion del fork monitor-terminal*/
+    status = pipe(pipeCH);
+    if (status == -1)
+    {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+
+    childpid = fork();/*0 si es el hijo y pid del hijo en el caso del padre*/
+    
+    if(childpid==-1){/*Control de errores*/
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+    else if (childpid==0)/*Caso hijo (terminal)*/
+    {
+        /* code */
+    }
+    else{/*Casi*/
+
+    }
+    
     /*Creacion de los hilos*/
     for (i = 0; i < nHilos; i++)
     {
@@ -113,7 +136,8 @@ long minero(int nHilos, long busq)
 
     for (i = 0; i < nHilos; i++)
     {
-        if((long)sol[i]!=-1){
+        if ((long)sol[i] != -1)
+        {
             return (long)sol[i];
         }
     }
