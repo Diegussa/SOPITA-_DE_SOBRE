@@ -18,11 +18,12 @@ typedef struct
 
 void *func_minero(void *arg);
 
-int minero(int nHilos, long busq, int rondas);
+void minero(int nHilos, long busq, int rondas);
 
 int main(int argc, char *argv[])
 {
     int rc[MAX_HILOS], t1, t2, i, status;
+    pid_t childpid;
 
     /*Control de errores*/
     t1 = clock();
@@ -32,19 +33,27 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /*Buscamos los elementos*/
-    status = minero(atoi(argv[3]), atol(argv[1]), (atoi(argv[2])));
-    if (status == EXIT_SUCCESS)
+    childpid = fork();
+    if (childpid == 0)
     {
-        printf("\nMiner exited with status 0");
+        minero(atoi(argv[3]), atol(argv[1]), (atoi(argv[2])));
     }
     else
     {
-        printf("\nMiner exited with status 1");
-    }
+        wait(&status);
+        /*Control de errores*/
+        if (status == EXIT_SUCCESS)
+        {
+            printf("\nMiner exited with status 0");
+        }
+        else
+        {
+            printf("\nMiner exited with status 1");
+        }
 
-    t2 = clock();
-    printf("\nTime spent %d\n", t2 - t1);
+        t2 = clock();
+        printf("\nTime spent %d\n", t2 - t1);
+    }
 
     return 0;
 }
@@ -66,7 +75,7 @@ void *func_minero(void *arg)
     pthread_exit((void *)x);
 }
 
-int minero(int nHilos, long busq, int rondas)
+void minero(int nHilos, long busq, int rondas)
 {
     int i, j, rc[MAX_HILOS], pipe1[2], pipe2[2], nbytes, exitV;
     entradaHash t[MAX_HILOS];
@@ -125,7 +134,6 @@ int minero(int nHilos, long busq, int rondas)
                 parPH[1] = -1;
                 nbytes = write(pipe2[1], parPH, sizeof(long) * 2);
                 exit(EXIT_FAILURE);
-                return -1;
             }
         }
 
@@ -148,7 +156,7 @@ int minero(int nHilos, long busq, int rondas)
                 if (rc[i])
                 {
                     printf("Error creando el hilo %d", i);
-                    return 1;
+                    exit(EXIT_FAILURE);
                 }
             }
 
@@ -159,7 +167,7 @@ int minero(int nHilos, long busq, int rondas)
                 if (rc[i])
                 {
                     printf("Error joining thread %d\n", i);
-                    return -1;
+                    exit(EXIT_FAILURE);
                 }
             }
 
@@ -182,7 +190,6 @@ int minero(int nHilos, long busq, int rondas)
                 {
                     printf("Error leyendo pipe2");
                     exit(EXIT_FAILURE);
-                    return -1;
                 }
             } while (comp[0] != parPH[0]);
             busq = parPH[1];
@@ -190,13 +197,13 @@ int minero(int nHilos, long busq, int rondas)
     }
 
     wait(&exitV); // espera a que el proceso hijo termine
-    
+
     if (exitV == EXIT_FAILURE)
     {
         printf("\nMonitor exited with status 1");
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
 
     printf("\nMonitor exited with status 0");
-    return EXIT_SUCCESS;
+    exit(EXIT_SUCCESS);
 }
