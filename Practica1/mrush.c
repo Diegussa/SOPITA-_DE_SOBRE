@@ -1,5 +1,3 @@
-#include <pthread.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,16 +15,12 @@ typedef struct
 
 void *func_minero(void *arg);
 
-long minero(int nHilos, long busq);
-long minero(int nHilos, long busq);
+long minero(int nHilos, long busq, int rondas);
 
 int main(int argc, char *argv[])
 {
     int rc[MAX_HILOS], t1, t2, i;
     long solucion, busq;
-    
-
-    
 
     /*Control de errores*/
     t1 = clock();
@@ -40,8 +34,7 @@ int main(int argc, char *argv[])
     busq = atol(argv[1]);
     for (i = 0; i < atoi(argv[2]); i++)
     {
-        solucion = minero(atoi(argv[3]), busq);
-        solucion = minero(atoi(argv[3]), busq);
+        solucion = minero(atoi(argv[3]), busq, (atoi(argv[2])));
 
         /*Impresion de la solucion*/
         if (pow_hash(solucion) == busq)
@@ -84,8 +77,7 @@ void *func_minero(void *arg)
     pthread_exit((void *)x);
 }
 
-long minero(int nHilos, long busq)
-long minero(int nHilos, long busq)
+long minero(int nHilos, long busq, int rondas)
 {
     int i, rc[MAX_HILOS], status, pipeCH[2];
     entradaHash t[MAX_HILOS];
@@ -93,15 +85,10 @@ long minero(int nHilos, long busq)
     void *sol[MAX_HILOS];
     pid_t childpid;
 
-    /*Creacion del fork monitor-terminal*/
-    status = pipe(pipeCH);
-    if (status == -1)
-    /*Creacion del fork monitor-terminal*/
-    status = pipe(pipeCH);
-    if (status == -1)
+    /*Creacion de las dos pipes de comunicacion*/
+    if (pipe(pipe1) == -1)
     {
-        perror("pipe");
-        perror("pipe");
+        perror("pipe1");
         exit(EXIT_FAILURE);
     }
 
@@ -111,16 +98,36 @@ long minero(int nHilos, long busq)
         perror("fork");
         exit(EXIT_FAILURE);
     }
-    else if (childpid==0)/*Caso hijo (terminal)*/
-    else if (childpid==0)/*Caso hijo (terminal)*/
+    else if (childpid == 0) /*Caso hijo (terminal)*/
     {
-        /* code */
-    }
-    else{/*Casi*/
-        /* code */
-    }
-    else{/*Casi*/
+        close(pipe1[1]);
+        close(pipe2[0]);
+        sleep(1);
+        do{
+            nbytes=read(pipe1[0], parPH, sizeof(long)*2);
+            printf("nbytes %d", nbytes);
+            if(nbytes==-1){
+                printf("Error");
+                exit(EXIT_FAILURE);
+            }
+        } while (nbytes==0); 
 
+        /*Impresion de la solucion*/
+        if (pow_hash(parPH[1]) == parPH[0])
+        {
+            printf("\nSolution accepted: %08ld --> %08ld", parPH[0], parPH[1]);
+            nbytes = write(pipe2[1],parPH, sizeof(long)*2);
+        }
+        else
+        {
+            printf("\nSolution rejected: %08ld !-> %08ld", parPH[0], parPH[1]);
+            printf("\nThe soluction has been invalidated");
+            parPH[0]=-1;
+            parPH[1]=-1;
+            nbytes = write(pipe2[1],parPH, sizeof(long)*2);
+            exit(EXIT_FAILURE);
+            return -1;
+        }
     }
     
     /*Creacion de los hilos*/
@@ -136,51 +143,27 @@ long minero(int nHilos, long busq)
             return 1;
         }
     }
-    
-    /*Creacion de los hilos*/
-    for (i = 0; i < nHilos; i++)
-    {
-        t[i].ep = ((long)MAX / nHilos) * i;
-        t[i].eu = ((long)MAX / nHilos) * (i + 1);
-        t[i].res = busq;
-        rc[i] = pthread_create(&threads[i], NULL, func_minero, (void *)&t[i]);
-        if (rc[i])
-        {
-            printf("Error creando el hilo %d", i);
-            return 1;
-        }
-    }
 
-    /*Joins de los hilos*/
-    for (i = 0; i < nHilos; i++)
-    {
-        rc[i] = pthread_join(threads[i], &sol[i]);
-        if (rc[i])
+        /*Joins de los hilos*/
+        for (i = 0; i < nHilos; i++)
         {
-            printf("Error joining thread %d\n", i);
-            return -1;
+            rc[i] = pthread_join(threads[i], &sol[i]);
+            if (rc[i])
+            {
+                printf("Error joining thread %d\n", i);
+                return -1;
+            }
         }
-    }
-    /*Joins de los hilos*/
-    for (i = 0; i < nHilos; i++)
-    {
-        rc[i] = pthread_join(threads[i], &sol[i]);
-        if (rc[i])
-        {
-            printf("Error joining thread %d\n", i);
-            return -1;
-        }
-    }
 
-    for (i = 0; i < nHilos; i++)
-    {
-        if ((long)sol[i] != -1)
-    for (i = 0; i < nHilos; i++)
-    {
-        if ((long)sol[i] != -1)
+        for (i = 0; i < nHilos; i++)
         {
-            return (long)sol[i];
-            return (long)sol[i];
+            if ((long)sol[i] != -1)
+            {
+                parPH[0]=(long)busq;
+                parPH[1]=(long)sol[i];
+                nbytes = write(pipe1[1],parPH, sizeof(long)*2);
+                i=nHilos;/*Para salir del bucle*/
+            }
         }
     }
 }
