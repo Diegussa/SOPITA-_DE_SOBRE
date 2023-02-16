@@ -19,6 +19,7 @@ typedef struct
 void *func_minero(void *arg);
 
 void minero(int nHilos, long busq, int rondas);
+int gestHilos(int nHilos, long busq, long *res);
 
 int main(int argc, char *argv[])
 {
@@ -81,7 +82,6 @@ void minero(int nHilos, long busq, int rondas)
     entradaHash t[MAX_HILOS];
     long parPH[2], comp[2] = {0, 0};
     pthread_t threads[MAX_HILOS];
-    void *sol[MAX_HILOS];
     pid_t childpid;
 
     /*Creacion de las dos pipes de comunicacion*/
@@ -146,7 +146,48 @@ void minero(int nHilos, long busq, int rondas)
 
         for (j = 0; j < rondas; j++)
         {
-            /*Creacion de los hilos*/
+            if(gestHilos(nHilos, busq, parPH)==EXIT_FAILURE){
+                printf("Error en la gestion de hilos\n");
+                exit(EXIT_FAILURE);
+            }
+
+            nbytes = write(pipe1[1], parPH, sizeof(long) * 2);
+            if(nbytes==-1){
+                exit(EXIT_FAILURE);
+            }
+
+            do
+            {
+                nbytes = read(pipe2[0], comp, sizeof(long) * 2);
+                if ((nbytes == -1) || comp[0] == -1)
+                {
+                    printf("Error leyendo pipe2");
+                    exit(EXIT_FAILURE);
+                }
+            } while (comp[0] != parPH[0]);
+            busq = parPH[1];
+        }
+    }
+
+    wait(&exitV); // espera a que el proceso hijo termine
+
+    if (exitV == EXIT_FAILURE)
+    {
+        printf("\nMonitor exited with status 1");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("\nMonitor exited with status 0");
+    exit(EXIT_SUCCESS);
+}
+
+int gestHilos(int nHilos, long busq, long *res){
+    int i, rc[MAX_HILOS], parPH[2];
+    entradaHash t[MAX_HILOS];
+    pthread_t threads[MAX_HILOS];
+    void *sol[MAX_HILOS];
+
+    /*Creacion de los hilos*/
             for (i = 0; i < nHilos; i++)
             {
                 t[i].ep = ((long)MAX / nHilos) * i;
@@ -176,34 +217,10 @@ void minero(int nHilos, long busq, int rondas)
             {
                 if ((long)sol[i] != -1)
                 {
-                    parPH[0] = (long)busq;
-                    parPH[1] = (long)sol[i];
-                    nbytes = write(pipe1[1], parPH, sizeof(long) * 2);
+                    res[0] = (long)busq;
+                    res[1] = (long)sol[i];
                     i = nHilos; /*Para salir del bucle*/
                 }
             }
-
-            do
-            {
-                nbytes = read(pipe2[0], comp, sizeof(long) * 2);
-                if ((nbytes == -1) || comp[0] == -1)
-                {
-                    printf("Error leyendo pipe2");
-                    exit(EXIT_FAILURE);
-                }
-            } while (comp[0] != parPH[0]);
-            busq = parPH[1];
-        }
-    }
-
-    wait(&exitV); // espera a que el proceso hijo termine
-
-    if (exitV == EXIT_FAILURE)
-    {
-        printf("\nMonitor exited with status 1");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("\nMonitor exited with status 0");
-    exit(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
