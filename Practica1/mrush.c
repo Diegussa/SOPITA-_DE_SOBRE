@@ -82,7 +82,8 @@ void *func_minero(void *arg)
 
 long minero(int nHilos, long busq, int rondas)
 {
-    int i, rc[MAX_HILOS], status, pipeCH[2];
+    int i, rc[MAX_HILOS], status, pipe1[2], pipe2[2], nbytes;
+    long parPH[2], comp[2];
     entradaHash t[MAX_HILOS];
     pthread_t threads[MAX_HILOS];
     void *sol[MAX_HILOS];
