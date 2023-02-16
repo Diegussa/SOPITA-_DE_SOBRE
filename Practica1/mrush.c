@@ -1,4 +1,5 @@
 #include <pthread.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,11 +18,14 @@ typedef struct
 void *func_minero(void *arg);
 
 long minero(int nHilos, long busq);
+long minero(int nHilos, long busq);
 
 int main(int argc, char *argv[])
 {
     int rc[MAX_HILOS], t1, t2, i;
     long solucion, busq;
+    
+
     
 
     /*Control de errores*/
@@ -36,6 +40,7 @@ int main(int argc, char *argv[])
     busq = atol(argv[1]);
     for (i = 0; i < atoi(argv[2]); i++)
     {
+        solucion = minero(atoi(argv[3]), busq);
         solucion = minero(atoi(argv[3]), busq);
 
         /*Impresion de la solucion*/
@@ -80,9 +85,9 @@ void *func_minero(void *arg)
 }
 
 long minero(int nHilos, long busq)
+long minero(int nHilos, long busq)
 {
-    int i, rc[MAX_HILOS], pipe1[2], pipe2[2], nbytes;
-    long parPH[2], comp[2];
+    int i, rc[MAX_HILOS], status, pipeCH[2];
     entradaHash t[MAX_HILOS];
     pthread_t threads[MAX_HILOS];
     void *sol[MAX_HILOS];
@@ -91,33 +96,45 @@ long minero(int nHilos, long busq)
     /*Creacion del fork monitor-terminal*/
     status = pipe(pipeCH);
     if (status == -1)
+    /*Creacion del fork monitor-terminal*/
+    status = pipe(pipeCH);
+    if (status == -1)
     {
+        perror("pipe");
         perror("pipe");
         exit(EXIT_FAILURE);
     }
 
-    if (pipe(pipe2) == -1)
-    {
-        perror("pipe1");
-        exit(EXIT_FAILURE);
-        return -1;
-    }
-
-
-    /*Creacion del fork monitor-terminal*/
-    childpid = fork(); /*0 si es el hijo y pid del hijo en el caso del padre*/
-
-    if (childpid == -1)
-    { /*Control de errores*/
+    childpid = fork();/*0 si es el hijo y pid del hijo en el caso del padre*/
+    
+    if(childpid==-1){/*Control de errores*/
         perror("fork");
         exit(EXIT_FAILURE);
     }
+    else if (childpid==0)/*Caso hijo (terminal)*/
     else if (childpid==0)/*Caso hijo (terminal)*/
     {
         /* code */
     }
     else{/*Casi*/
+        /* code */
+    }
+    else{/*Casi*/
 
+    }
+    
+    /*Creacion de los hilos*/
+    for (i = 0; i < nHilos; i++)
+    {
+        t[i].ep = ((long)MAX / nHilos) * i;
+        t[i].eu = ((long)MAX / nHilos) * (i + 1);
+        t[i].res = busq;
+        rc[i] = pthread_create(&threads[i], NULL, func_minero, (void *)&t[i]);
+        if (rc[i])
+        {
+            printf("Error creando el hilo %d", i);
+            return 1;
+        }
     }
     
     /*Creacion de los hilos*/
@@ -144,11 +161,25 @@ long minero(int nHilos, long busq)
             return -1;
         }
     }
+    /*Joins de los hilos*/
+    for (i = 0; i < nHilos; i++)
+    {
+        rc[i] = pthread_join(threads[i], &sol[i]);
+        if (rc[i])
+        {
+            printf("Error joining thread %d\n", i);
+            return -1;
+        }
+    }
 
     for (i = 0; i < nHilos; i++)
     {
         if ((long)sol[i] != -1)
+    for (i = 0; i < nHilos; i++)
+    {
+        if ((long)sol[i] != -1)
         {
+            return (long)sol[i];
             return (long)sol[i];
         }
     }
