@@ -3,6 +3,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
+#include <assert.h>
 #include "pow.h"
 
 #define MAX POW_LIMIT - 1
@@ -79,8 +81,9 @@ void *func_minero(void *arg)
 
 long minero(int nHilos, long busq, int rondas)
 {
-    int i, rc[MAX_HILOS], status, pipeCH[2];
+    int i, rc[MAX_HILOS], status, pipe1[2], pipe2[2], nbytes;
     entradaHash t[MAX_HILOS];
+    long parPH[2], comp[2];
     pthread_t threads[MAX_HILOS];
     void *sol[MAX_HILOS];
     pid_t childpid;
@@ -89,6 +92,11 @@ long minero(int nHilos, long busq, int rondas)
     if (pipe(pipe1) == -1)
     {
         perror("pipe1");
+        exit(EXIT_FAILURE);
+    }
+    if (pipe(pipe2) == -1)
+    {
+        perror("pipe2");
         exit(EXIT_FAILURE);
     }
 
@@ -102,10 +110,10 @@ long minero(int nHilos, long busq, int rondas)
     {
         close(pipe1[1]);
         close(pipe2[0]);
-        sleep(1);
+        /*sleep(1);*/
+        
         do{
             nbytes=read(pipe1[0], parPH, sizeof(long)*2);
-            printf("nbytes %d", nbytes);
             if(nbytes==-1){
                 printf("Error");
                 exit(EXIT_FAILURE);
@@ -129,8 +137,11 @@ long minero(int nHilos, long busq, int rondas)
             return -1;
         }
     }
-    
-    /*Creacion de los hilos*/
+    else{
+        close(pipe1[0]);
+        close(pipe2[1]);
+
+        /*Creacion de los hilos*/
     for (i = 0; i < nHilos; i++)
     {
         t[i].ep = ((long)MAX / nHilos) * i;
@@ -165,5 +176,19 @@ long minero(int nHilos, long busq, int rondas)
                 i=nHilos;/*Para salir del bucle*/
             }
         }
+
+        do{
+            nbytes=read(pipe2[0], comp, sizeof(long)*2);
+            if((nbytes==-1)||comp[0]==-1){
+                printf("Error leyendo pipe2");
+                exit(EXIT_FAILURE);
+                return -1;
+            }
+        }while(comp[0]!=parPH[0]);
+
+        printf("Recibido los comps del pip2 %ld %ld", comp[0], comp[1]);
     }
-}
+    
+    exit(EXIT_SUCCESS);
+    return 0;
+    }
