@@ -15,4 +15,10 @@ LIBS= -lm -pthread ### -lm enlaza la biblioteca matematica, -pthread enlaza la b
 mrush: mrush.c pow.c
 	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
 
+mrush152: mrush152.c pow.c
+	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+mrushfork: mrushfork.c pow.c
+	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
+
 #----------------------------------------------------------------------------------------------------------------------------
