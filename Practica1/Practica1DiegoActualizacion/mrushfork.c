@@ -9,6 +9,8 @@
 #define MAX POW_LIMIT-1
 #define MAX_HILOS 100
 
+int encontrado;
+
 typedef struct
 {
     long ep, eu, res;
@@ -62,11 +64,12 @@ void *func_minero(void *arg)
     long x = -1;
     entradaHash *e = (entradaHash *)arg;
 
-    for (i = e->ep; (i < e->eu) && (x <= 0); i++)
+    for (i = e->ep; (i < e->eu) && (x <= 0)&&(encontrado==0); i++)
     {
         if ((long)pow_hash(i) == e->res)
         {
             x = i;
+            encontrado=1;
         }
     }
 
@@ -176,6 +179,7 @@ long minar(int nHilos,long nbusquedas, long busq, int pipeLectura,int pipeEscrit
     incr=((int)MAX) / nHilos;
     for ( j = 0 ; j < nbusquedas ; j++)
     {   
+        encontrado=0;
         for (i = 0; i < nHilos; i++)
         {
             t[i].ep = incr * i;

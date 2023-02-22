@@ -7,42 +7,66 @@
 
 #define POW_LIMIT 99997669
 #define MAX POW_LIMIT - 1
+int a;
 
 void *func_minero(void *arg)
 {
-    int i;
-    long x =2;
-    x=(*(int*)arg)*x;
+    int i,*m=(int*)arg;
+    long x =-1;
+
+    for (i = 0; (i < 1000000) && (x <= 0) && (a == 0); i++)
+    {
+        
+
+        if ((long)i == (long)*m)
+        {
+            a=1;
+            x=i;
+        }
+    }
+    printf("%d\n",i);
     pthread_exit((void *)x);
 }
 
 int main(){
-    int i,K,t1[2]={10,2},a;
-    pthread_t thread1,thread2;
-    int *sol[2];
+    int i,K,t1[100];
+    pthread_t threads[100];
+    int *sol[100];
+    a=0;
    
-     K = pthread_create(&thread1, NULL, func_minero, (void *)t1);
-     if(K){
-        printf("Error 1\n");
-        return EXIT_FAILURE;
-     }
-    K = pthread_create(&thread2, NULL, func_minero, (void *)(t1+1));
-    if(K){
-        printf("Error 2\n");
-        return EXIT_FAILURE;
-     }
-     
-     K = pthread_join(thread1, sol);
-     if(K){
-        printf("Error 3\n");
-        return EXIT_FAILURE;
-     }
-      
-     K = pthread_join(thread2, sol+1);
-     if(K){
-        printf("Error 4\n");
-        return EXIT_FAILURE;
-     }
-     printf (" %d=2*%d %d=2*%d",sol[0],t1[0],sol[1],t1[1]);
+     /*Creacion de los hilos*/
+    for (i = 0; i < 100; i++)
+    {
+         t1[i]=100000000;
+         if( i == 73)   
+            t1[i]= 17;
+         
+        K= pthread_create(&threads[i], NULL, func_minero, (void *)&t1[i]);
+        if (K)
+        {
+            printf("Error creando el hilo %d", i);
+            return 1;
+        }
+    }
+
+    /*Joins de los hilos*/
+    for (i = 0; i < 100; i++)
+    {
+        K= pthread_join(threads[i], &sol[i]);
+        if (K)
+        {
+            printf("Error joining thread %d\n", i);
+            return -1;
+        }
+    }
+
+    for (i = 0; i < 100; i++)
+    {
+        if ((long)sol[i] != -1)
+        {
+            printf("%d %d",i, (long)sol[i]);
+
+        }
+    }
      return EXIT_SUCCESS;
 }
