@@ -12,19 +12,21 @@ int a;
 void *func_minero(void *arg)
 {
     int i,*m=(int*)arg;
-    long x =-1;
+    long x =0;
 
-    for (i = 0; (i < 1000000) && (x <= 0) && (a == 0); i++)
+    for (i = 0; (x <= 0) && (a == 0); i++)
     {
         
 
         if ((long)i == (long)*m)
         {
             a=1;
-            x=i;
+            x=-1;
+            pthread_exit((void *)x);
+            return ;
         }
     }
-    printf("%d\n",i);
+    x=i;
     pthread_exit((void *)x);
 }
 
@@ -62,11 +64,11 @@ int main(){
 
     for (i = 0; i < 100; i++)
     {
-        if ((long)sol[i] != -1)
-        {
-            printf("%d %d",i, (long)sol[i]);
+       
+        
+            printf("%d %d\n",i, (long)sol[i]);
 
-        }
+        
     }
      return EXIT_SUCCESS;
 }
