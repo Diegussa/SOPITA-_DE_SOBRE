@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 #include <time.h>
 
 #define POW_LIMIT 99997669
@@ -31,7 +32,7 @@ void *func_minero(void *arg)
 }
 
 int main(){
-    int i,K,t1[100];
+    int i,K,t1[100],busq=17;
     pthread_t threads[100];
     int *sol[100];
     a=0;
@@ -39,9 +40,9 @@ int main(){
      /*Creacion de los hilos*/
     for (i = 0; i < 100; i++)
     {
-         t1[i]=100000000;
+         t1[i]=INT_MAX;
          if( i == 73)   
-            t1[i]= 17;
+            t1[i]= busq;
          
         K= pthread_create(&threads[i], NULL, func_minero, (void *)&t1[i]);
         if (K)
