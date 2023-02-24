@@ -32,7 +32,7 @@ void *func_minero(void *arg)
     pthread_exit((void *)x);
 }
 
-long minero(int nHilos, long nbusquedas, long busq)
+void minero(int nHilos, long nbusquedas, long busq)
 {
     int newpid, status, pipeMon_min[2], pipeMin_mon[2];
     /*Creación de las pipeline MON->MIN y MIN->MON*/
@@ -59,7 +59,7 @@ long minero(int nHilos, long nbusquedas, long busq)
                                /*Funcion MINERO que crea todos los hilos*/
         if (minar(nHilos, nbusquedas, busq, pipeMon_min[0], pipeMin_mon[1]) == 0)
         {
-            return -1;
+            exit(EXIT_FAILURE);
         }
     }
     else
@@ -75,8 +75,8 @@ long minero(int nHilos, long nbusquedas, long busq)
 
 int monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
 {
-    int nbytes, parSol[2], Exito = 0;
-    long solucion, busq;
+    int nbytes, Exito = 0;
+    long solucion, busq, parSol[2];
     /*Es necesario leer de la tubería la solucion y el numero a buscar */
     /*Creacion del fork monitor-terminal*/
 
@@ -84,7 +84,7 @@ int monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
     /*Cierre de lectura al final de en el hijo */
     while (1)
     {
-        nbytes = read(pipeLectura, &parSol, sizeof(int) * 2);
+        nbytes = read(pipeLectura, &parSol, sizeof(long) * 2);
         if (nbytes == -1)
         {
             printf("\nERROR 146\n");
@@ -134,9 +134,9 @@ int monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
 long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscritura)
 {
 
-    int i, j, incr, rc[MAX_HILOS], parSol[2], nbytes, Exito = 0, Status;
+    int i, j, incr, rc[MAX_HILOS], nbytes, Exito = 0, Status;
     entradaHash t[MAX_HILOS];
-    int solucion;
+    long solucion, parSol[2];
     pthread_t threads[MAX_HILOS];
     void *sol[MAX_HILOS];
 
@@ -183,16 +183,16 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
         }
         for (i = 0; i < nHilos; i++)
         {
-            if ((int)sol[i] != -1)
+            if ((long)sol[i] != -1)
             {
-                solucion = (int)sol[i];
+                solucion = (long)sol[i];
                 break;
             }
         }
         parSol[0] = solucion;
         parSol[1] = busq;
 
-        nbytes = write(pipeEscritura, &parSol, sizeof(int) * 2);
+        nbytes = write(pipeEscritura, &parSol, sizeof(long) * 2);
         if (nbytes == -1)
         {
             printf("\nERROR 243\n");

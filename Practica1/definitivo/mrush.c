@@ -7,38 +7,32 @@
 #include "pow.h"
 #include "mrush.h"
 
-int encontrado;
-
-
 int main(int argc, char *argv[])
 {
-    int rc[MAX_HILOS], i,newpid,Status;
-    long solucion, busq;
+    int newpid, Status;
     struct timespec inicio, fin;
     double tiempo_transcurrido;
 
     // Obtenemos el tiempo actual
     clock_gettime(CLOCK_REALTIME, &inicio);
     /*Control de errores*/
-    
+
     if ((atoi(argv[1]) < 0) || (atoi(argv[1]) > POW_LIMIT) || (atoi(argv[2]) < 0) || (atoi(argv[3]) < 0) || (atoi(argv[3]) > MAX_HILOS))
     {
         printf("\n\nError en los parametros de entrada");
         return 1;
     }
-    
+
     /*Buscamos los elementos*/
-    busq = atol(argv[1]);
-    newpid=fork();
-    if(newpid){
-            wait(&Status); 
-            printf("Miner exited with status %d\n",Status);
-
-        
-    }else{
-       
-        busq = minero(atoi(argv[3]),atoi(argv[2]), busq); /*Queremos que minero devuelve el proximo numero a buscar*/
-
+    newpid = fork();
+    if (newpid)
+    {
+        wait(&Status);
+        printf("Miner exited with status %d\n", Status);
+    }
+    else
+    {
+        minero(atoi(argv[3]), atoi(argv[2]), atol(argv[1])); /*Queremos que minero devuelve el proximo numero a buscar*/
     }
 
     /*Medimos el tiempo actual*/
@@ -48,4 +42,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-
