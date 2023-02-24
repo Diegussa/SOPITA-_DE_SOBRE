@@ -15,7 +15,6 @@ typedef struct
 } entradaHash;
 
 void *func_minero(void *arg);
-
 void minero(int nHilos, long busq, int rondas);
 int gestHilos(int nHilos, long busq, long *res);
 
@@ -23,6 +22,17 @@ int main(int argc, char *argv[])
 {
     int rc[MAX_HILOS], t1, t2, i, status;
     pid_t childpid;
+    struct timespec inicio, fin;
+    double tiempo_transcurrido;
+
+    // Obtenemos el tiempo actual
+    clock_gettime(CLOCK_REALTIME, &inicio);
+
+
+    // Obtenemos el tiempo actual y calculamos la diferencia
+    
+
+    
 
     /*Control de errores*/
     t1 = clock();
@@ -55,7 +65,9 @@ int main(int argc, char *argv[])
         }
 
         t2 = clock();
-        printf("\nTime spent %d\n", t2 - t1);
+        clock_gettime(CLOCK_REALTIME, &fin);
+    tiempo_transcurrido = (double)(fin.tv_sec - inicio.tv_sec) + (double)(fin.tv_nsec - inicio.tv_nsec) / 1000000000.0;
+        printf("El tiempo de ejecución fue de %.9f segundos.\n", tiempo_transcurrido);
     }
 
     return 0;
