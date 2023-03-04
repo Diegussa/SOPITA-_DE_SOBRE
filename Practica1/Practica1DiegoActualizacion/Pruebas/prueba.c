@@ -15,7 +15,7 @@ void *func_minero(void *arg)
     int i,*m=(int*)arg;
     long x =0;
 
-    for (i = 0; (x <= 0) && (a == 0); i++)
+    for (i = 0; (a == 0); i++)
     {
         
 

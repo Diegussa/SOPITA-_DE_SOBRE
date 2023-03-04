@@ -21,7 +21,7 @@ run:
 
 
 runv:
-	valgrind --leak-check=full ./mrush 1 2 2
+	valgrind --leak-check=full --show-leak-kinds=all ./mrush 2 4 4
 #----------------------------------------------------------------------------------------------------------------------------
 clean:
 	rm -v mrush 

@@ -20,5 +20,5 @@ run:
 
 
 runv:
-	valgrind --leak-check=full ./prueba
+	valgrind --leak-check=full  --show-leak-kinds=all ./prueba
 #----------------------------------------------------------------------------------------------------------------------------
