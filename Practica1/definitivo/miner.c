@@ -39,13 +39,13 @@ void minero(int nHilos, long nbusquedas, long busq)
     status = pipe(pipeMon_min);
     if (status == -1)
     {
-        perror("pipe");
+        perror("pipe creation");
         exit(EXIT_FAILURE);
     }
     status = pipe(pipeMin_mon);
     if (status == -1)
     {
-        perror("pipe");
+        perror("pipe creation");
         exit(EXIT_FAILURE);
     }
     /*Creacion del proceso monitor*/
@@ -81,14 +81,13 @@ int monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
     /*Creacion del fork monitor-terminal*/
 
     /*Impresion de la solucion*/
-    /*Cierre de lectura al final de en el hijo */
+    /*Cierre de lectura al final en el hijo */
     while (1)
     {
         nbytes = read(pipeLectura, &parSol, sizeof(long) * 2);
         if (nbytes == -1)
         {
-            printf("\nERROR 146\n");
-            perror("read");
+            perror("read monitor");
             close(pipeEscritura);
             close(pipeLectura);
             exit(EXIT_FAILURE);
@@ -97,9 +96,8 @@ int monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
         {
             close(pipeEscritura);
             close(pipeLectura);
-            if (nBusquedas == 0)
+            if (nBusquedas == 0 && pow_hash(solucion) == busq)
                 exit(EXIT_SUCCESS);
-            printf("\nERROR 152\n");
             exit(EXIT_FAILURE);
         }
         solucion = (long)parSol[0];
@@ -122,8 +120,7 @@ int monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
         nbytes = write(pipeEscritura, &Exito, sizeof(int) * 1);
         if (nbytes == -1)
         {
-            printf("\nERROR\n");
-            perror("read");
+            perror("write monitor");
             close(pipeEscritura);
             close(pipeLectura);
             exit(EXIT_FAILURE);
@@ -144,6 +141,7 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
     for (j = 0; j < nbusquedas; j++)
     {
         encontrado = 0;
+        /*Creación de hilos*/
         for (i = 0; i < nHilos; i++)
         {
             t[i].ep = incr * i;
@@ -157,7 +155,6 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
 
             if (rc[i])
             {
-                printf("\nERROR 210\n");
                 perror("Thread creation");
                 close(pipeEscritura);
                 wait(&Status);
@@ -172,7 +169,6 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
             rc[i] = pthread_join(threads[i], sol + i);
             if (rc[i])
             {
-                printf("\nERROR 223\n");
                 perror("Thread joining");
                 close(pipeEscritura);
                 wait(&Status);
@@ -195,8 +191,7 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
         nbytes = write(pipeEscritura, &parSol, sizeof(long) * 2);
         if (nbytes == -1)
         {
-            printf("\nERROR 243\n");
-            perror("read");
+            perror("write miner");
             close(pipeEscritura);
             wait(&Status);
             printf("Monitor exited with status %d\n", Status);
@@ -209,7 +204,7 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
         nbytes = read(pipeLectura, &Exito, sizeof(int) * 1);
         if (nbytes == -1)
         {
-            perror("read");
+            perror("read miner");
             close(pipeEscritura);
             wait(&Status);
             printf("Monitor exited with status %d\n", Status);
@@ -218,8 +213,7 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
         }
         if (nbytes == 0)
         {
-            printf("\nERROR 263\n");
-            perror("read");
+            perror("read miner 0");
             close(pipeEscritura);
             wait(&Status);
             printf("Monitor exited with status %d\n", Status);
@@ -229,8 +223,6 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
 
         if (!Exito)
         {
-            printf("\nERROR 271\n");
-
             close(pipeEscritura);
             wait(&Status);
             printf("Monitor exited with status %d\n", Status);
