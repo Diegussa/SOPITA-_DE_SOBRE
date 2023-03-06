@@ -14,6 +14,41 @@ struct _entradaHash
     long ep, eu, res;
 };
 
+/*Declaracion de funciones privadas*/
+/**
+ * @brief Crea un hilo que busca la solucion entre dos parametros
+ *
+ * @param arg estructura que almacena el rango en el que buscar y la solución a buscar
+ * 
+ * @return un puntero con el resultado de la busqueda
+ */
+void *func_minero(void *arg);
+
+/**
+ * @brief Imprime y comprueba las soluciones
+ *
+ * @param pipeLectura pipe del que se leen las soluciones
+ * @param pipeEscritura pipe en el que se escriben las soluciones
+ * @param nbusquedas numero de rondas que se haran
+ * 
+ * @return EXIT_SUCCESS, si todo va bien or EXIT_FAILURE en caso de error
+ */
+void monitor(int pipeLectura, int pipeEscritura,int nbusquedas);
+
+/**
+ * @brief Gestiona los hilos
+ *
+ * @param nHilos numero de hilos a crear
+ * @param nbusquedas numero de rondas que se haran
+ * @param busq solucion a buscar
+ * @param pipeLectura pipe del que se leen las soluciones
+ * @param pipeEscritura pipe en el que se escriben las soluciones
+ * 
+ * @return nada
+ */
+void minar(int nHilos, long nbusquedas, long busq, int pipeLectura,int pipeEscritura);
+
+
 void *func_minero(void *arg)
 {
     int i;
@@ -32,59 +67,11 @@ void *func_minero(void *arg)
     pthread_exit((void *)x);
 }
 
-void minero(int nHilos, long nbusquedas, long busq)
-{
-    int newpid, status, pipeMon_min[2], pipeMin_mon[2];
-
-    /*Creación de las pipeline MON->MIN y MIN->MON*/
-    status = pipe(pipeMon_min);
-    if (status == -1)
-    {
-        perror("pipe creation");
-        exit(EXIT_FAILURE);
-    }
-
-    status = pipe(pipeMin_mon);
-    if (status == -1)
-    {
-        perror("pipe creation");
-        exit(EXIT_FAILURE);
-    }
-
-    /*Creacion del proceso monitor*/
-    newpid = fork();
-    if (newpid)
-    {
-        /*Proceso MIN*/
-        /*Cierro los ficheros que no vamos a usar*/
-        close(pipeMon_min[1]); /*Escritura MON->MIN*/
-        close(pipeMin_mon[0]); /*Lectura MIN->MON*/
-                               /*Funcion MINERO que crea todos los hilos*/
-        if (minar(nHilos, nbusquedas, busq, pipeMon_min[0], pipeMin_mon[1]) == 0)
-        {
-            exit(EXIT_FAILURE);
-        }
-    }
-    else
-    {
-        /*Código del hijo, monitor*/
-        /*Cierro los ficheros que no vamos a usar*/
-        close(pipeMin_mon[1]); /*Escritura MIN->MON*/
-        close(pipeMon_min[0]); /*Lectura MON->MIN*/
-                               /*Funcion MONITOR */
-        monitor(pipeMin_mon[0], pipeMon_min[1], nbusquedas);
-    }
-}
-
-int monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
+void monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
 {
     int nbytes, Exito = 0;
-    long solucion, busq, parSol[2];
-    /*Es necesario leer de la tubería la solucion y el numero a buscar */
-    /*Creacion del fork monitor-terminal*/
+    long solucion, busq, parSol[2]; /*Es necesario leer de la tubería la solucion y el numero a buscar */
 
-    /*Impresion de la solucion*/
-    /*Cierre de lectura al final en el hijo */
     while (1)
     {
         nbytes = read(pipeLectura, &parSol, sizeof(long) * 2);
@@ -131,7 +118,7 @@ int monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
     }
 }
 
-long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscritura)
+void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscritura)
 {
 
     int i, j, incr, rc[MAX_HILOS], nbytes, Exito = 0, Status;
@@ -203,7 +190,6 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
         }
 
         /*Código de comunicación de la solucion al proceso hijo (monitor)*/
-
         nbytes = read(pipeLectura, &Exito, sizeof(int) * 1);
         if (nbytes == -1)
         {
@@ -223,7 +209,6 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
             close(pipeLectura);
             exit(EXIT_FAILURE);
         }
-
         if (!Exito)
         {
             close(pipeEscritura);
@@ -235,10 +220,51 @@ long minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
         busq = solucion;
         /*Comprobar que es correcto*/
     }
+
     close(pipeEscritura);
     wait(&Status);
     printf("Monitor exited with status %d\n", Status);
     close(pipeLectura);
     exit(EXIT_SUCCESS);
-    return 0;
+}
+
+void minero(int nHilos, long nbusquedas, long busq)
+{
+    int newpid, status, pipeMon_min[2], pipeMin_mon[2];
+
+    /*Creación de las pipeline MON->MIN y MIN->MON*/
+    status = pipe(pipeMon_min);
+    if (status == -1)
+    {
+        perror("pipe creation");
+        exit(EXIT_FAILURE);
+    }
+
+    status = pipe(pipeMin_mon);
+    if (status == -1)
+    {
+        perror("pipe creation");
+        exit(EXIT_FAILURE);
+    }
+
+    /*Creacion del proceso monitor*/
+    newpid = fork();
+    if (newpid)
+    {
+        /*Proceso MIN*/
+        /*Cierro los ficheros que no vamos a usar*/
+        close(pipeMon_min[1]); /*Escritura MON->MIN*/
+        close(pipeMin_mon[0]); /*Lectura MIN->MON*/
+                               /*Funcion MINERO que crea todos los hilos*/
+        minar(nHilos, nbusquedas, busq, pipeMon_min[0], pipeMin_mon[1]);
+    }
+    else
+    {
+        /*Código del hijo, monitor*/
+        /*Cierro los ficheros que no vamos a usar*/
+        close(pipeMin_mon[1]); /*Escritura MIN->MON*/
+        close(pipeMon_min[0]); /*Lectura MON->MIN*/
+                               /*Funcion MONITOR */
+        monitor(pipeMin_mon[0], pipeMon_min[1], nbusquedas);
+    }
 }
