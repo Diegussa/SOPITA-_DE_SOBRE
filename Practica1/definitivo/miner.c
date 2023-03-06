@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#include "pow.h"
 #include "miner.h"
 
 int encontrado;
