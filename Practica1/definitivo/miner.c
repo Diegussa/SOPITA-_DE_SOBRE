@@ -153,6 +153,7 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
                 exit(EXIT_FAILURE);
             }
         }
+
         /*Joins de los hilos*/
         for (i = 0; i < nHilos; i++)
         {
@@ -167,6 +168,7 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
                 exit(EXIT_FAILURE);
             }
         }
+
         for (i = 0; i < nHilos; i++)
         {
             if ((long)sol[i] != -1)
@@ -175,6 +177,7 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
                 break;
             }
         }
+        
         parSol[0] = solucion;
         parSol[1] = busq;
 
