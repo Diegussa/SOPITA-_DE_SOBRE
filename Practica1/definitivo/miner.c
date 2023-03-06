@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #include "pow.h"
 #include "miner.h"
@@ -34,6 +35,7 @@ void *func_minero(void *arg)
 void minero(int nHilos, long nbusquedas, long busq)
 {
     int newpid, status, pipeMon_min[2], pipeMin_mon[2];
+
     /*Creación de las pipeline MON->MIN y MIN->MON*/
     status = pipe(pipeMon_min);
     if (status == -1)
@@ -41,12 +43,14 @@ void minero(int nHilos, long nbusquedas, long busq)
         perror("pipe creation");
         exit(EXIT_FAILURE);
     }
+
     status = pipe(pipeMin_mon);
     if (status == -1)
     {
         perror("pipe creation");
         exit(EXIT_FAILURE);
     }
+
     /*Creacion del proceso monitor*/
     newpid = fork();
     if (newpid)
