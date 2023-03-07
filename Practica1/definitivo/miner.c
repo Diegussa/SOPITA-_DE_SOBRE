@@ -127,24 +127,14 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
     void *sol[MAX_HILOS];
 
     incr = ((int)MAX) / nHilos;
-    for (j = 0; j < nbusquedas; j++)
+    for (j = 0; j <= nbusquedas; j++)
     {
-        encontrado = 0;
-        /*Creación de hilos*/
-        for (i = 0; i < nHilos; i++)
-        {
-            t[i].ep = incr * i;
-            t[i].eu = incr * (i + 1);
-            if (i == nHilos - 1)
-            { /*Para el caso en el que MAX no sea divisible por NHilos*/
-                t[i].eu = MAX;
-            }
-            t[i].res = busq;
-            rc[i] = pthread_create(&threads[i], NULL, func_minero, (void *)(t + i));
-
-            if (rc[i])
+        /*Escribimos el reslutado de la búsqueda anterior*/
+        if ( j > 0){
+            nbytes = write(pipeEscritura, &parSol, sizeof(long) * 2);
+            if (nbytes == -1)
             {
-                perror("Thread creation");
+                perror("write miner");
                 close(pipeEscritura);
                 wait(&Status);
                 printf("Monitor exited with status %d\n", Status);
@@ -152,75 +142,94 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
                 exit(EXIT_FAILURE);
             }
         }
-
-        /*Joins de los hilos*/
-        for (i = 0; i < nHilos; i++)
-        {
-            rc[i] = pthread_join(threads[i], sol + i);
-            if (rc[i])
+        if ( j < nbusquedas){
+            encontrado = 0;
+            /*Creación de hilos*/
+            for (i = 0; i < nHilos; i++)
             {
-                perror("Thread joining");
+                t[i].ep = incr * i;
+                t[i].eu = incr * (i + 1);
+                if (i == nHilos - 1)
+                { /*Para el caso en el que MAX no sea divisible por NHilos*/
+                    t[i].eu = MAX;
+                }
+                t[i].res = busq;
+                rc[i] = pthread_create(&threads[i], NULL, func_minero, (void *)(t + i));
+
+                if (rc[i])
+                {
+                    perror("Thread creation");
+                    close(pipeEscritura);
+                    wait(&Status);
+                    printf("Monitor exited with status %d\n", Status);
+                    close(pipeLectura);
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            /*Joins de los hilos*/
+            for (i = 0; i < nHilos; i++)
+            {
+                rc[i] = pthread_join(threads[i], sol + i);
+                if (rc[i])
+                {
+                    perror("Thread joining");
+                    close(pipeEscritura);
+                    wait(&Status);
+                    printf("Monitor exited with status %d\n", Status);
+                    close(pipeLectura);
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            for (i = 0; i < nHilos; i++)
+            {
+                if ((long)sol[i] != -1)
+                {
+                    solucion = (long)sol[i];
+                    break;
+                }
+            }
+            
+            parSol[0] = solucion;
+            parSol[1] = busq;
+        }
+        
+
+        /*Código de comunicación de la solucion al proceso hijo (monitor)*/
+        if(j > 0 ){
+            nbytes = read(pipeLectura, &Exito, sizeof(int) * 1);
+            if (nbytes == -1)
+            {
+                perror("read miner");
                 close(pipeEscritura);
                 wait(&Status);
                 printf("Monitor exited with status %d\n", Status);
                 close(pipeLectura);
                 exit(EXIT_FAILURE);
             }
-        }
-
-        for (i = 0; i < nHilos; i++)
-        {
-            if ((long)sol[i] != -1)
+            if (nbytes == 0)
             {
-                solucion = (long)sol[i];
-                break;
+                perror("read miner 0");
+                close(pipeEscritura);
+                wait(&Status);
+                printf("Monitor exited with status %d\n", Status);
+                close(pipeLectura);
+                exit(EXIT_FAILURE);
+            }
+            /*Comprobar que es correcto*/
+
+            if (!Exito)
+            {
+                close(pipeEscritura);
+                wait(&Status);
+                printf("Monitor exited with status %d\n", Status);
+                close(pipeLectura);
+                exit(EXIT_FAILURE);
             }
         }
         
-        parSol[0] = solucion;
-        parSol[1] = busq;
-
-        nbytes = write(pipeEscritura, &parSol, sizeof(long) * 2);
-        if (nbytes == -1)
-        {
-            perror("write miner");
-            close(pipeEscritura);
-            wait(&Status);
-            printf("Monitor exited with status %d\n", Status);
-            close(pipeLectura);
-            exit(EXIT_FAILURE);
-        }
-
-        /*Código de comunicación de la solucion al proceso hijo (monitor)*/
-        nbytes = read(pipeLectura, &Exito, sizeof(int) * 1);
-        if (nbytes == -1)
-        {
-            perror("read miner");
-            close(pipeEscritura);
-            wait(&Status);
-            printf("Monitor exited with status %d\n", Status);
-            close(pipeLectura);
-            exit(EXIT_FAILURE);
-        }
-        if (nbytes == 0)
-        {
-            perror("read miner 0");
-            close(pipeEscritura);
-            wait(&Status);
-            printf("Monitor exited with status %d\n", Status);
-            close(pipeLectura);
-            exit(EXIT_FAILURE);
-        }
-        if (!Exito)
-        {
-            close(pipeEscritura);
-            wait(&Status);
-            printf("Monitor exited with status %d\n", Status);
-            close(pipeLectura);
-            exit(EXIT_FAILURE);
-        }
         busq = solucion;
-        /*Comprobar que es correcto*/
     }
 
     close(pipeEscritura);
