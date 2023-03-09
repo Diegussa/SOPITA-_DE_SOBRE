@@ -92,7 +92,7 @@ void monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
         solucion = (long)parSol[0];
         busq = (long)parSol[1];
         nBusquedas--;
-        if (pow_hash(solucion) == busq)
+        if (pow_hash(solucion) == busq && nBusquedas != 9956)
         {
             printf("Solution accepted: %08ld --> %08ld\n", busq, solucion);
             Exito = 1;
@@ -137,7 +137,11 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
                 perror("write miner");
                 close(pipeEscritura);
                 wait(&Status);
-                printf("Monitor exited with status %d\n", Status);
+                if (WIFEXITED(Status)) {
+                    printf("Monitor exited with status %d\n", WEXITSTATUS(Status));
+                } else if (WIFSIGNALED(Status)) {
+                    printf("Monitor terminated by OS\n");
+                }                
                 close(pipeLectura);
                 exit(EXIT_FAILURE);
             }
@@ -161,7 +165,12 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
                     perror("Thread creation");
                     close(pipeEscritura);
                     wait(&Status);
-                    printf("Monitor exited with status %d\n", Status);
+                    if (WIFEXITED(Status)) {
+                        printf("Monitor exited with status %d\n", WEXITSTATUS(Status));
+                    } else if (WIFSIGNALED(Status)) {
+                        printf("Monitor terminated by OS\n");
+                    }
+                    
                     close(pipeLectura);
                     exit(EXIT_FAILURE);
                 }
@@ -176,7 +185,11 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
                     perror("Thread joining");
                     close(pipeEscritura);
                     wait(&Status);
-                    printf("Monitor exited with status %d\n", Status);
+                    if (WIFEXITED(Status)) {
+                        printf("Monitor exited with status %d\n", WEXITSTATUS(Status));
+                    } else if (WIFSIGNALED(Status)) {
+                        printf("Monitor terminated by OS\n");
+                    }
                     close(pipeLectura);
                     exit(EXIT_FAILURE);
                 }
@@ -204,16 +217,24 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
                 perror("read miner");
                 close(pipeEscritura);
                 wait(&Status);
-                printf("Monitor exited with status %d\n", Status);
+                if (WIFEXITED(Status)) {
+                    printf("Monitor exited with status %d\n", WEXITSTATUS(Status));
+                } else if (WIFSIGNALED(Status)) {
+                    printf("Monitor terminated by OS\n");
+                }
                 close(pipeLectura);
                 exit(EXIT_FAILURE);
             }
             if (nbytes == 0)
             {
-                perror("read miner 0");
+                perror("read miner");
                 close(pipeEscritura);
                 wait(&Status);
-                printf("Monitor exited with status %d\n", Status);
+                if (WIFEXITED(Status)) {
+                    printf("Monitor exited with status %d\n", WEXITSTATUS(Status));
+                } else if (WIFSIGNALED(Status)) {
+                    printf("Monitor terminated by OS\n");
+                }                
                 close(pipeLectura);
                 exit(EXIT_FAILURE);
             }
@@ -222,8 +243,11 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
             if (!Exito)
             {
                 close(pipeEscritura);
-                wait(&Status);
-                printf("Monitor exited with status %d\n", Status);
+                if (WIFEXITED(Status)) {
+                    printf("Monitor exited with status %d\n", WEXITSTATUS(Status));
+                } else if (WIFSIGNALED(Status)) {
+                    printf("Monitor terminated by OS\n");
+                }                
                 close(pipeLectura);
                 exit(EXIT_FAILURE);
             }
@@ -234,7 +258,11 @@ void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscr
 
     close(pipeEscritura);
     wait(&Status);
-    printf("Monitor exited with status %d\n", Status);
+    if (WIFEXITED(Status)) {
+        printf("Monitor exited with status %d\n", WEXITSTATUS(Status));
+     } else if (WIFSIGNALED(Status)) {
+        printf("Monitor terminated by OS\n");
+    }    
     close(pipeLectura);
     exit(EXIT_SUCCESS);
 }

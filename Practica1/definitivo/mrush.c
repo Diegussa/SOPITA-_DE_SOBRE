@@ -22,7 +22,12 @@ int main(int argc, char *argv[])
 
     {
         wait(&Status);
-        printf("Miner exited with status %d\n", Status);
+        if (WIFEXITED(Status)) {
+            printf("Miner exited with status %d\n", WEXITSTATUS(Status));
+        } else if (WIFSIGNALED(Status)) {
+            printf("Miner terminated by OS\n");
+        }
+        
     }
     else
     {
