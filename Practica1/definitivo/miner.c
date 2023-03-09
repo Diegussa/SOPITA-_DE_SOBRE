@@ -92,7 +92,7 @@ void monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
         solucion = (long)parSol[0];
         busq = (long)parSol[1];
         nBusquedas--;
-        if (pow_hash(solucion) == busq && nBusquedas != 9956)
+        if (pow_hash(solucion) == busq)
         {
             printf("Solution accepted: %08ld --> %08ld\n", busq, solucion);
             Exito = 1;
