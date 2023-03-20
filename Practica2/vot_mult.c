@@ -10,10 +10,12 @@
 #define MAX_PROCS 1000
 
 
+/*Returns 0 on succes, -1 on Error and more info in errno*/
 
 int up(sem_t *sem){
  return sem_post(sem);
 }
+
 /*Returns 0 on succes, -1 on Error and more info in errno*/
 int down( sem_t *sem){
   return sem_wait(sem);
@@ -31,7 +33,7 @@ int main(int argc, char *argv[]) {
   int padre=0;
 
   if (argc != 3) {
-    fprintf(stderr, "Usage: %s -<signal> <pid>\n", argv[0]);
+    fprintf(stderr, "Usage: %s <N_PROCS> <N_SECS>\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
@@ -47,7 +49,7 @@ int main(int argc, char *argv[]) {
   }
     sigsuspend
   for(i=0;i<n_procs && padre!=0; i++ ){
-    
+    ret= kill(pid[i],SIGUSR1);
   }
 
 
