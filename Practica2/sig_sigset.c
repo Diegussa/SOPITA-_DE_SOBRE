@@ -20,7 +20,9 @@ int main(void) {
 
   printf("Waiting signals (PID = %d)\n", getpid());
   printf("SIGUSR1 and SIGUSR2 are blocked\n");
-  pause();
+  sleep(15);
+
+  sigprocmask(SIG_UNBLOCK, &set, &oset);
 
   printf("End of program\n");
   exit(EXIT_SUCCESS);

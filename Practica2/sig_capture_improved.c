@@ -27,6 +27,6 @@ int main(void) {
       got_signal = 0;
       printf("Signal received.\n");
     }
-    sleep(9999);
+    sleep(9);
   }
 }

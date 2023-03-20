@@ -33,17 +33,25 @@ int main(void) {
 
   if (pid == 0) {
     /* Insert code A. */
+    
     printf("1\n");
     /* Insert code B. */
+    sem_post(sem1);
+    sem_wait(sem2);
     printf("3\n");
     /* Insert code C. */
+    sem_post(sem1);
 
     sem_close(sem1);
     sem_close(sem2);
   } else {
     /* Insert code D. */
+    sem_wait(sem1);
     printf("2\n");
     /* Insert code E. */
+    sem_post(sem2);
+    sem_wait(sem1);
+
     printf("4\n");
     /* Insert code F. */
 

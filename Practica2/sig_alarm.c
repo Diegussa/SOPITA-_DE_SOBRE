@@ -9,7 +9,8 @@
 void handler_SIGALRM(int sig) {
   printf("\nThese are the numbers I had time to count\n");
   exit(EXIT_SUCCESS);
-}
+} 
+/*Returns 0 on succes, -1 on Error and more info in errno*/
 
 int main(void) {
   struct sigaction act;
@@ -18,7 +19,7 @@ int main(void) {
   sigemptyset(&(act.sa_mask));
   act.sa_flags = 0;
 
-  /* The handler for SIGALRM is set. */
+  /*The handler for SIGALRM is set. */ 
   act.sa_handler = handler_SIGALRM;
   if (sigaction(SIGALRM, &act, NULL) < 0) {
     perror("sigaction");

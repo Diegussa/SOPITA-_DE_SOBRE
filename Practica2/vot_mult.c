@@ -1,8 +1,28 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <semaphore.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #define MAX_PROCS 1000
+
+
+
+int up(sem_t *sem){
+ return sem_post(sem);
+}
+/*Returns 0 on succes, -1 on Error and more info in errno*/
+int down( sem_t *sem){
+  return sem_wait(sem);
+}
+/*Returns 0 on succes, -1 on Error and more info in errno*/
+/*It is a non blocking down*/
+int down_try( sem_t *sem){
+  return sem_waittry(sem);
+}
 
 int main(int argc, char *argv[]) {
   int n_procs, n_sec;
