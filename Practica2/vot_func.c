@@ -27,42 +27,44 @@ void handlerSIGUSR1(int sig)
 
 void handlerSIGTERM(int sig)
 {
-  if ( sig == SIGTERM){
+  if (sig == SIGTERM)
+  {
     printf("%d == %d SIGTERM %ld \n", sig, SIGTERM, (long)getpid());
     got_sigTERM = 1;
   }
 }
 
-STATUS votar(char *nFichV){
-    FILE *f=NULL;
-    int r;
-    char letra;
+STATUS votar(char *nFichV)
+{
+  FILE *f = NULL;
+  int r;
+  char letra;
 
-    f=fopen(nFichV, "wb+");
-    if(!f){
-        return ERROR;
-    }
+  f = fopen(nFichV, "wb+");
+  if (!f)
+  {
+    return ERROR;
+  }
 
-    srand(time(NULL));
-    r=rand();
-    if(r<(RAND_MAX/2))
-        letra='N';
-    else
-        letra='Y';
+  srand(time(NULL));
+  r = rand();
+  if (r < (RAND_MAX / 2))
+    letra = 'N';
+  else
+    letra = 'Y';
 
-    fwrite(&letra, sizeof(char), 1, f);
-    /*fwrite(' ', sizeof(char), 1, f);*/
+  fwrite(&letra, sizeof(char), 1, f);
+  /*fwrite(' ', sizeof(char), 1, f);*/
 
+  fclose(f);
 
-    fclose(f);
-
-    return OK;
+  return OK;
 }
 
 /*Returns 0 on succes, -1 on Error and more info in errno*/
 int up(sem_t *sem)
 {
-   return sem_post(sem);
+  return sem_post(sem);
 }
 
 /*Returns 0 on succes, -1 on Error and more info in errno*/
@@ -77,7 +79,6 @@ int down_try(sem_t *sem)
 {
   return sem_waittry(sem);
 }*/
-
 
 /*Generates n_procs and writes their PID in a file*/
 void create_sons(int n_procs)
@@ -136,16 +137,16 @@ void send_signal_procs(int sig, int n_hijos)
     }
   }
   fclose(fHijos);
+}
 
-
-
-void voters(){
+void voters()
+{
 
   int i = 0;
   struct sigaction actSIGTERM;
   struct sigaction actSIGUSR1;
   struct sigaction actSIGINT;
-  sigset_t mask,mask2, oldmask;
+  sigset_t mask, mask2, oldmask;
 
   /*Blocking SIG_INT*/
   /*sigemptyset(&mask);
@@ -168,9 +169,8 @@ void voters(){
   sigemptyset(&(actSIGINT.sa_mask));
   actSIGINT.sa_flags == 0;
   */
-  
 
-   /* Preguntar a Javi por esto, cuando lo pongo, los procesos están zombies: sleep(10);*/
+  /* Preguntar a Javi por esto, cuando lo pongo, los procesos están zombies: sleep(10);*/
 
   actSIGUSR1.sa_handler = handlerSIGUSR1;
   sigemptyset(&(actSIGUSR1.sa_mask));
@@ -213,13 +213,13 @@ void voters(){
   /*sigemptyset(&mask);
   sigaddset(&mask, SIGTERM);
   sigprocmask(SIG_BLOCK, &mask, &oldmask);*/
-  while (!got_sigTERM);
+  while (!got_sigTERM)
+    ;
   /*  sigsuspend(&mask);
   printf("Sigterm recibido\n");*/
 
   printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
- sigprocmask(SIG_UNBLOCK, &mask, NULL);
+  sigprocmask(SIG_UNBLOCK, &mask, NULL);
 
   exit(0);
-}}
-
+}

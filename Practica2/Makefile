@@ -13,13 +13,13 @@ LIBS= -lm -lpthread -lrt ### -lm enlaza la biblioteca matematica, -pthread enlaz
 all: vote
 
 vote: vot_mult.o vot_func.o
-	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
+	$(CC) -o $@ $^ $(LIBS)
 
 vot_mult.o: vot_mult.c vot_func.h
-	$(CC) -o $@ $^ $(LIBS)
+	$(CC) -c $< 
 
 vot_func.o: vot_func.c vot_func.h
-	$(CC) -o $@ $^ $(LIBS)
+	$(CC) -c $< 
 #----------------------------------------------------------------------------------------------------------------------------
 run:
 	./vote 3 10
