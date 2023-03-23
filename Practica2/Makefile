@@ -1,0 +1,31 @@
+CC=gcc 
+CFLAGS = -ansi -pedantic -g -Wall -ggdb 
+#CFLAGS = -Wall -g -DNDEBUG #-O3 				#-DNDEBUG turns of asserts mandated by the C standards
+
+
+IFLAGS=-I. ##La opción -I se usa para indicar donde se encuentran los ficheros cabeceras (.h)
+
+LIBS= -lm -lpthread -lrt ### -lm enlaza la biblioteca matematica, -pthread enlaza la biblioteca de hilos
+
+## EXECUTIVES CREATION ##
+#----------------------------------------------------------------------------------------------------------------------------
+
+
+vote: vot_mult.o vot_func.o
+	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+vot_mult.o: vot_mult.c vot_func.h
+	$(CC) -o $@ $^ $(LIBS)
+
+vot_func.o: vot_func.c vot_func.h
+	$(CC) -o $@ $^ $(LIBS)
+#----------------------------------------------------------------------------------------------------------------------------
+run:
+	./vote 3 10
+
+
+runv:
+	valgrind --leak-check=full --show-leak-kinds=all ./vote 3 10
+#----------------------------------------------------------------------------------------------------------------------------
+clean:
+	rm -v vote *.o
