@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include "vot_func.h"
 
@@ -15,22 +16,28 @@
 #define NOMBREVOTAR "votos.txt"
 
 volatile sig_atomic_t got_sigUSR1 = 0;
+volatile sig_atomic_t got_sigUSR2 = 0;
 volatile sig_atomic_t got_sigTERM = 0;
 sem_t *semapVotar;
 
-void handlerSIGUSR1(int sig)
+void handler_voter(int sig)
 {
-
-  printf("%d == %d SIGUSR1 %ld\n", sig, SIGUSR1, (long)getpid());
-  got_sigUSR1 = 1;
-}
-
-void handlerSIGTERM(int sig)
-{
-  if (sig == SIGTERM)
+  switch (sig)
   {
+  case SIGTERM:
     printf("%d == %d SIGTERM %ld \n", sig, SIGTERM, (long)getpid());
     got_sigTERM = 1;
+    break;
+  case SIGUSR1:
+    printf("%d == %d SIGUSR1 %ld\n", sig, SIGUSR1, (long)getpid());
+    got_sigUSR1 = 1;
+    break;
+  case SIGUSR2:
+    printf("%d == %d SIGUSR1 %ld\n", sig, SIGUSR1, (long)getpid());
+    got_sigUSR2 = 1;
+
+  default:
+    break;
   }
 }
 
@@ -81,7 +88,7 @@ int down_try(sem_t *sem)
 }*/
 
 /*Generates n_procs and writes their PID in a file*/
-void create_sons(int n_procs)
+void create_sons(int n_procs, char *nameSemV, char *namesemC, sem_t *semV, sem_t *semC)
 {
   int pid = 0, i;
   FILE *fHijos;
@@ -98,14 +105,13 @@ void create_sons(int n_procs)
     if ((pid = fork()) == 0)
     {
       /*Function made for the sons*/
-      voters();
+      voters(nameSemV, namesemC,n_procs,semV,semC);
     }
-    if (pid == -1)
+    else if (pid == -1)
     {
-      for (i--; i >= 0; i--)
-      {
-        send_signal_procs(SIGTERM, i);
-      }
+      i--;
+      send_signal_procs(SIGTERM, i);
+
       exit(EXIT_FAILURE);
     }
 
@@ -138,8 +144,35 @@ void send_signal_procs(int sig, int n_hijos)
   }
   fclose(fHijos);
 }
+void end_processes(int n_procs)
+{
+  int i, status;
+  /*Enviar a cada hijo un SIGTERM*/
+  send_signal_procs(SIGTERM, n_procs);
+  /*Waiting fot the voters*/
+  for (i = 0; i < n_procs; i++)
+  {
+    wait(&status);
+    if (WEXITSTATUS(status) == 0)
+    {
+      printf("Error waiting\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+}
 
-void voters()
+void end_failure(sem_t *semV, sem_t *semC)
+{
+  if (semV && semC)
+  {
+    sem_close(semV);
+    sem_close(semC);
+  }
+
+  exit(EXIT_FAILURE);
+}
+
+void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *semC)
 {
 
   int i = 0;
@@ -165,61 +198,99 @@ void voters()
   }
   /*Quitar*/
   /*
-  actSIGINT.sa_handler=ignore;
+  actSIGINT.sa_handler=SIG_IGN;
   sigemptyset(&(actSIGINT.sa_mask));
   actSIGINT.sa_flags == 0;
   */
 
   /* Preguntar a Javi por esto, cuando lo pongo, los procesos están zombies: sleep(10);*/
 
-  actSIGUSR1.sa_handler = handlerSIGUSR1;
+  sigemptyset(&mask2);
+  sigaddset(&mask2, SIGUSR1);
+  sigaddset(&mask2, SIGUSR2);
+
+  sigprocmask(SIG_BLOCK, &mask2, &oldmask);
+  actSIGUSR1.sa_handler = handler_voter;
   sigemptyset(&(actSIGUSR1.sa_mask));
   actSIGUSR1.sa_flags = 0;
 
-  actSIGTERM.sa_handler = handlerSIGTERM;
+  actSIGTERM.sa_handler = handler_voter;
   sigemptyset(&(actSIGTERM.sa_mask));
   actSIGTERM.sa_flags = 0;
 
   if (sigaction(SIGINT, &actSIGTERM /*Esto deberiás ser su propoa sigaction*/, NULL) < 0)
   {
-    perror("sigaction SIGINT (IGNORE)");
-    exit(EXIT_FAILURE);
+    perror("sigaction SIGINT (IGNORE)\n");
+    end_failure(semV, semC);
   }
 
   if (sigaction(SIGTERM, &actSIGTERM, NULL) < 0)
   {
-    perror("sigaction SIGTERM");
-    exit(EXIT_FAILURE);
+    perror("sigaction SIGTERM\n");
+    end_failure(semV, semC);
   }
 
   if (sigaction(SIGUSR1, &actSIGUSR1, NULL) < 0)
   {
-    perror("sigaction SIGUSR1");
-    exit(EXIT_FAILURE);
+    perror("sigaction SIGUSR1\n");
+    end_failure(semV, semC);
   }
 
   printf("Soy el hijo: %ld\n", (long)getpid());
 
-  /*Mask to block signals SIGUSR1*/
-  sigemptyset(&mask2);
-  sigaddset(&mask2, SIGUSR1);
-  sigprocmask(SIG_BLOCK, &mask2, &oldmask);
-  while (!got_sigUSR1)
-    sigsuspend(&oldmask);
+  /*Aqui comienza el while 1*/
+  while (1)
+  {
+    /*Mask to block signals SIGUSR1*/
 
-  sigprocmask(SIG_UNBLOCK, &mask2, NULL);
-  /* Blocking of signals SIGUSR1 and SIGUSR2 in the process. */
+    while (!got_sigUSR1)
+      sigsuspend(&oldmask);
 
-  /*sigemptyset(&mask);
-  sigaddset(&mask, SIGTERM);
-  sigprocmask(SIG_BLOCK, &mask, &oldmask);*/
-  while (!got_sigTERM)
-    ;
-  /*  sigsuspend(&mask);
-  printf("Sigterm recibido\n");*/
+    sigprocmask(SIG_UNBLOCK, &mask2, NULL);
 
-  printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
-  sigprocmask(SIG_UNBLOCK, &mask, NULL);
+    /*Proposing a candidate*/
+    if (down(semC) == -1)/*Non candidate*/
+    {
+      if (errno == EINTR && got_sigUSR2)
+      {
+        got_sigUSR2 = 0;
+        /*Interrupted by a signal*/
+        votar(NOMBREVOTAR);
+      }
+      else
+      {/*ERROR, something that was not SIGUSR2 made the process to quit the down*/
+        end_failure(semV,semC);
+      }
+    }
+    else
+    {/*Candidate*/
+      candidato();
+    }
 
-  exit(0);
+    /* Blocking of signals SIGUSR1 and SIGUSR2 in the process. */
+
+    /*sigemptyset(&mask);
+    sigaddset(&mask, SIGTERM);
+    sigprocmask(SIG_BLOCK, &mask, &oldmask);*/
+
+    if (!got_sigTERM)
+    {
+      got_sigTERM = 0;
+      /*  sigsuspend(&mask);
+      printf("Sigterm recibido\n");*/
+
+      printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
+      sigprocmask(SIG_UNBLOCK, &mask, NULL);
+
+      sem_close(semV);
+      sem_close(semC);
+
+      exit(EXIT_SUCCESS);
+    }
+  }
+}
+
+
+void candidato(){
+    
 }
