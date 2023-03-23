@@ -24,7 +24,6 @@ vot_func.o: vot_func.c vot_func.h
 run:
 	./vote 3 10
 
-
 runv:
 	valgrind --leak-check=full --show-leak-kinds=all ./vote 3 10
 #----------------------------------------------------------------------------------------------------------------------------
