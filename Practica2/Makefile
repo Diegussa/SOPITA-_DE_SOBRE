@@ -10,6 +10,7 @@ LIBS= -lm -lpthread -lrt ### -lm enlaza la biblioteca matematica, -pthread enlaz
 ## EXECUTIVES CREATION ##
 #----------------------------------------------------------------------------------------------------------------------------
 
+all: vote
 
 vote: vot_mult.o vot_func.o
 	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)

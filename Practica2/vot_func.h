@@ -6,9 +6,7 @@
  * @date 2023-03-23
  *
  */
-
 #ifndef VOT_FUNC_H
-
 #define VOT_FUNC_H
 
 
