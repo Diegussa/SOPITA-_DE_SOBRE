@@ -46,7 +46,6 @@ int main(int argc, char *argv[])
   semV = sem_open(nameSemV, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
   if (semV == SEM_FAILED)
   {
-    printf("Holas!\n");
     perror("sem_open SemV");
     end_processes(n_procs);
 
@@ -56,7 +55,6 @@ int main(int argc, char *argv[])
   semC = sem_open(nameSemC, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
   if (semC == SEM_FAILED)
   {
-    printf("Holas\n");
     end_processes(n_procs);
     sem_close(semV);
     sem_unlink(nameSemV);
@@ -66,9 +64,8 @@ int main(int argc, char *argv[])
 
   create_sons(n_procs, nameSemV, nameSemC, semV, semC);
 
-
   /*Send every son the signal SIGUSR1*/
-  send_signal_procs(SIGUSR1, n_procs);
+  send_signal_procs(SIGUSR1, n_procs, NO_PID);
 
   /*Change the SIGINT handler*/
   actSIGINT.sa_handler = handler_main;

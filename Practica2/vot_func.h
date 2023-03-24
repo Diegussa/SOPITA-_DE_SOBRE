@@ -15,6 +15,8 @@
 #include <pthread.h>
 
 
+#define NO_PID -1
+
 typedef enum
 {
   ERROR,

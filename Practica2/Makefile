@@ -25,13 +25,13 @@ run:
 	./vote 3 10
 
 runv:
-	valgrind --leak-check=full --show-leak-kinds=all ./vote 3 10
+	valgrind --leak-check=full --show-leak-kinds=all ./vote 2 10
 #----------------------------------------------------------------------------------------------------------------------------
 clean:
 	rm -v vote *.o
 
-check_sem:
+cs:
 	ls /dev/shm
 
-clean_sem:
+rs:
 	 rm /dev/shm/*
