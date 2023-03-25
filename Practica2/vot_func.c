@@ -15,6 +15,7 @@
 
 #define NOMBREFICHERO "hijosPID.txt"
 #define NOMBREVOTAR "votos.txt"
+#define DEBUG
 
 volatile sig_atomic_t got_sigUSR1 = 0;
 volatile sig_atomic_t got_sigUSR2 = 0;
@@ -26,15 +27,23 @@ void handler_voter(int sig)
   switch (sig)
   {
   case SIGTERM:
-    printf("%d == %d SIGTERM %ld \n", sig, SIGTERM, (long)getpid());
+    #ifdef DEBUG
+        printf("%d == %d SIGTERM %ld \n", sig, SIGTERM, (long)getpid());
+    #endif
     got_sigTERM = 1;
     break;
   case SIGUSR1:
-    printf("U1 %ld ", (long)getpid());
+     #ifdef DEBUG
+      printf("U1 %ld ", (long)getpid());
+      #endif
     got_sigUSR1 = 1;
     break;
   case SIGUSR2:
-    printf("U2 %ld ", (long)getpid());
+
+    #ifdef DEBUG
+      printf("U2 %ld ", (long)getpid());
+    #endif
+   
     got_sigUSR2 = 1;
     break;
 
@@ -62,8 +71,9 @@ STATUS votingCarefully(char *nFichV)
     letra = 'Y';
 
   fwrite(&letra, sizeof(char), 1, f);
-  printf("v %c\n", letra);
-
+  #ifdef DEBUG
+    printf("v %c\n", letra);
+  #endif
   fclose(f);
 
   return OK;
@@ -168,7 +178,7 @@ void send_signal_procs(int sig, int n_hijos, long pid)
       ret = kill(PIDs[i], sig);
       if (ret)
       {
-        fprintf(stderr, "ERROR sending %d to the son number %led \n", sig, PIDs[i]);
+        fprintf(stderr, "ERROR sending %d to the son number %d \n", sig, PIDs[i]);
         exit(EXIT_FAILURE);
       }
     }
@@ -192,7 +202,10 @@ void end_processes(int n_procs)
       printf("Error waiting\n");
       exit(EXIT_FAILURE);
     }
-    printf("EXIT_STATUS %d\n", WEXITSTATUS(status));
+  #ifdef DEBUG
+   printf("EXIT_STATUS %d\n", WEXITSTATUS(status));
+  #endif
+    
   }
 }
 
@@ -232,13 +245,11 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
   sigemptyset(&(actSIG.sa_mask));
   actSIG.sa_flags = 0;
 
-  /*quitar*/
-  if (sigaction(SIGINT, &actSIG /*Esto deberiás ser su propoa sigaction*/, NULL) < 0)
+  if (sigaction(SIGINT, &actSIG, NULL) < 0)
   {
     perror("sigaction SIGINT (IGNORE)\n");
     end_failure(semV, semC);
   }
-  /*quitar*/
 
   if (sigaction(SIGTERM, &actSIG, NULL) < 0)
   {
@@ -262,8 +273,12 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
   sigprocmask(SIG_UNBLOCK, &mask2, NULL);
 
   /*Main bucle*/
-  while (i < 10)
+  while (1)
   {
+    #ifdef DEBUG
+      if(i==3)
+        got_sigTERM =1;
+    #endif
     i++;
     /*Mask to block signals SIGUSR1*/
     while (!got_sigUSR1)
@@ -272,16 +287,18 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
     }
 
     got_sigUSR1 = 0;
-    sem_getvalue(semC, &val);
-    printf("predown %d\n", val);
-    sleep((rand() % 100) / 100);
+    #ifdef DEBUG
+      sem_getvalue(semC, &val);
+
+      printf("predown %d\n", val);
+      sleep((rand() % 100) / 100);
+    #endif
+    
 
     /*Proposing a candidate*/
     if (down_try(semC) == -1)
     {
       /*Non candidate*/
-      printf("postdown %d\n", val);
-
       while (!got_sigUSR2)
       {
         sigsuspend(&oldmask);
@@ -289,7 +306,10 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
 
       got_sigUSR2 = 0;
       /*Exclusion Mutua Votar*/
-      printf("Votante=%ld\n", (long)getpid());
+      #ifdef DEBUG
+       printf("Votante=%ld\n", (long)getpid());
+      #endif
+      
       down(semV);
       votingCarefully(NOMBREVOTAR);
       up(semV);
@@ -298,14 +318,20 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
     { /*Candidate*/
       candidato(n_procs);
       up(semC);
+      #ifdef DEBUG
+        sleep(4);
+      #endif
       send_signal_procs(SIGUSR1, n_procs, NO_PID);
     }
     if (got_sigTERM)
     {
       got_sigTERM = 0;
-
-      printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
+      #ifdef DEBUG
+        printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
+      #endif
+      /*
       sigprocmask(SIG_UNBLOCK, &mask, NULL);
+      */
 
       sem_close(semV);
       sem_close(semC);
@@ -356,6 +382,7 @@ void candidato(int n_procs)
   fclose(f);
 
   /*Print the result of the votation*/
+  
   printf("Candidate %d => [", (int)getpid());
   /*Count the votes*/
   for (i = 0; i < n_procs - 1; i++)
@@ -364,7 +391,9 @@ void candidato(int n_procs)
     {
       cont++;
     }
-    printf(" %c", votes[i]);
+       printf(" %c", votes[i]);
+
+    
   }
 
   if (cont <= (n_procs / 2))
