@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
   struct sigaction actPRINC;
   char nameSemV[10] = "/semV58", nameSemC[10] = "/semC58";
   sem_t *semV, *semC;
+  sigset_t mask;
 
   /*Control error*/
   if (argc != 3)
@@ -61,8 +62,36 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   }
 
+ 
   n_procs = atoi(argv[1]);
   n_sec = atoi(argv[2]);
+
+  /*Blocking temporarly SIG_INT and SIG_ALARM to set their handlers*/
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGINT);
+  sigaddset(&mask,SIGALRM);
+  sigprocmask(SIG_BLOCK,&mask, NULL);
+
+  /*Change the SIGINT + SIGALRM handler*/
+  actPRINC.sa_handler = handler_main;
+  sigemptyset(&(actPRINC.sa_mask));
+  actPRINC.sa_flags = 0;
+
+  if (sigaction(SIGINT, &actPRINC, NULL) < 0)
+  {
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC);
+    perror("sigaction SIGINT");
+    exit(EXIT_FAILURE);
+  }
+
+  if (sigaction(SIGALRM, &actPRINC, NULL) < 0)
+  {
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC);
+    perror("sigaction SIGALRM");
+    exit(EXIT_FAILURE);
+  }
+  /*Unblocking SIG_INT and SIG_ALARM*/
+  sigprocmask(SIG_UNBLOCK,&mask, NULL);
 
   /*Creation of the semaphores (to vote and to select the candidate)*/
   semV = sem_open(nameSemV, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
@@ -86,25 +115,6 @@ int main(int argc, char *argv[])
 
   /*Send every son the signal SIGUSR1*/
   send_signal_procs(SIGUSR1, n_procs, NO_PID);
-
-  /*Change the SIGINT +SIGALRM handler*/
-  actPRINC.sa_handler = handler_main;
-  sigemptyset(&(actPRINC.sa_mask));
-  actPRINC.sa_flags = 0;
-
-  if (sigaction(SIGINT, &actPRINC, NULL) < 0)
-  {
-    finishProg(n_procs, semV, nameSemV, semC, nameSemC);
-    perror("sigaction SIGINT");
-    exit(EXIT_FAILURE);
-  }
-
-  if (sigaction(SIGALRM, &actPRINC, NULL) < 0)
-  {
-    finishProg(n_procs, semV, nameSemV, semC, nameSemC);
-    perror("sigaction SIGALRM");
-    exit(EXIT_FAILURE);
-  }
 
   /*Setting of the alarm*/
   if (alarm(n_sec))

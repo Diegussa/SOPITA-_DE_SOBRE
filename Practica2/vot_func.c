@@ -15,7 +15,7 @@
 
 #define NOMBREFICHERO "hijosPID.txt"
 #define NOMBREVOTAR "votos.txt"
-//#define DEBUG
+#define DEBUG
 
 volatile sig_atomic_t got_sigUSR1 = 0;
 volatile sig_atomic_t got_sigUSR2 = 0;
@@ -228,7 +228,7 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
   sigaddset(&mask, SIGINT);
   sigprocmask(SIG_BLOCK, &mask, NULL);
 
-  /*Block temporarily SIGUSR1. SIGUSR2, SIGTERM*/
+  /*Block temporarily SIGUSR1. SIGUSR2, SIGTERM to set their handers*/
   sigemptyset(&mask2);
   sigaddset(&mask2, SIGUSR1);
   sigaddset(&mask2, SIGUSR2);
@@ -270,13 +270,13 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
 
   /*Main bucle*/
   while (1)
-  {
+  { /*
     #ifdef DEBUG
       if(i==3)
         got_sigTERM =1;
       i++;
     #endif
-    
+    */
     /*Mask to block signals SIGUSR1*/
     while (!got_sigUSR1)
       sigsuspend(&oldmask);
@@ -286,7 +286,7 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
       sem_getvalue(semC, &val);
 
       printf("predown %d\n", val);
-      sleep((rand() % 100) / 100);
+      usleep((rand() % 200) * 678);
     #endif
     
 
@@ -298,11 +298,11 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
         sigsuspend(&oldmask);
 
       got_sigUSR2 = 0;
-      /*Exclusion Mutua Votar*/
       #ifdef DEBUG
        printf("Votante=%ld\n", (long)getpid());
       #endif
-      
+
+      /*Exclusion Mutua Votar*/
       down(semV);
       votingCarefully(NOMBREVOTAR);
       up(semV);
@@ -318,6 +318,9 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
       #endif
       send_signal_procs(SIGUSR1, n_procs, NO_PID);
     }
+    /*Aqui habría que sincronizar a los procesos ( que comprueben la condición de got_sigTERM a la vez (SUS))*/
+    /*Existe un arreglo que te soluciona muchos casos que es hacer el suspend de SIGUSR1 aquí en vez de arriba así más o menos van a la vez*/
+    /*Seguimos con la suposición de tiempos aun que esta es más razonable*/
     if (got_sigTERM)
     {
       got_sigTERM = 0;
