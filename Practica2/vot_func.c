@@ -27,23 +27,23 @@ void handler_voter(int sig)
   switch (sig)
   {
   case SIGTERM:
-    #ifdef DEBUG
-        printf("%d == %d SIGTERM %ld \n", sig, SIGTERM, (long)getpid());
-    #endif
+#ifdef DEBUG
+    printf("%d == %d SIGTERM %ld \n", sig, SIGTERM, (long)getpid());
+#endif
     got_sigTERM = 1;
     break;
   case SIGUSR1:
-     #ifdef DEBUG
-      printf("U1 %ld ", (long)getpid());
-      #endif
+#ifdef DEBUG
+    //printf("U1 %ld ", (long)getpid());
+#endif
     got_sigUSR1 = 1;
     break;
   case SIGUSR2:
 
-    #ifdef DEBUG
-      printf("U2 %ld ", (long)getpid());
-    #endif
-   
+#ifdef DEBUG
+   // printf("U2 %ld ", (long)getpid());
+#endif
+
     got_sigUSR2 = 1;
     break;
 
@@ -71,9 +71,9 @@ STATUS votingCarefully(char *nFichV)
     letra = 'Y';
 
   fwrite(&letra, sizeof(char), 1, f);
-  #ifdef DEBUG
-    printf("v %ld: %c\n", (long)getpid(), letra);
-  #endif
+#ifdef DEBUG
+  printf("v %ld: %c\n", (long)getpid(), letra);
+#endif
   fclose(f);
 
   return OK;
@@ -173,11 +173,11 @@ void send_signal_procs(int sig, int n_hijos, long pid)
     if (PIDs[i] != pid)
     {
       ret = kill(PIDs[i], sig);
-      if (ret) /*An extra USR1 can be send depending on the relative speed of the processes*/
+      /*if (ret) /*An extra USR1 can be send depending on the relative speed of the processes
       {
-        fprintf(stderr, "ERROR sending %d to the son number %d \n", sig, PIDs[i]);
-        /*exit(EXIT_FAILURE);*/
-      }
+        fprintf(stderr, "ERROR sending %d to the son number %d by %d \n", sig, PIDs[i], getppid());
+        /*exit(EXIT_FAILURE);
+      }*/
     }
   }
 
@@ -199,9 +199,9 @@ void end_processes(int n_procs)
       printf("Error waiting\n");
       exit(EXIT_FAILURE);
     }
-  #ifdef DEBUG
-   printf("EXIT_STATUS %d\n", WEXITSTATUS(status));
-  #endif
+#ifdef DEBUG
+    printf("EXIT_STATUS %d\n", WEXITSTATUS(status));
+#endif
   }
 }
 
@@ -268,10 +268,9 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
   /*Unblock SIGUSR1. SIGUSR2, SIGTERM*/
   sigprocmask(SIG_UNBLOCK, &mask2, NULL);
 
-  /*First sigUSR1 expected from the main process*/
-  while (!got_sigUSR1)
-      sigsuspend(&oldmask);
-
+  /*Setting a mask with SIGTERM*/
+  sigemptyset(&mask2);
+  sigaddset(&mask2, SIGTERM);
   /*Main loop*/
   while (1)
   { /*
@@ -282,21 +281,21 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
     #endif
     */
 
-   #ifdef DEBUG
-        printf(" Desbloqueamos SIGTERM %d\n", getpid());
-    #endif
-   /* Unblocking SIG_TERM */
-    sigprocmask(SIG_UNBLOCK, &mask2, NULL);
-  
-
+    /*Suspend the process waiting for SIGUSR1*/
+    while (!got_sigUSR1)
+      sigsuspend(&oldmask);
     got_sigUSR1 = 0;
-    #ifdef DEBUG
-      sem_getvalue(semC, &val);
-
-      printf("predown %d\n", val);
-      usleep((rand() % 200) * 678);
-    #endif
     
+    /* Unblocking SIG_TERM */
+    sigprocmask(SIG_UNBLOCK, &mask2, NULL);
+
+    /*Block_SIG_TERM*/
+    sigprocmask(SIG_BLOCK, &mask2, NULL);
+
+    
+#ifdef DEBUG
+    usleep((rand() % 200) * 6780);
+#endif
 
     /*Proposing a candidate*/
     if (down_try(semC) == -1)
@@ -306,9 +305,6 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
         sigsuspend(&oldmask);
 
       got_sigUSR2 = 0;
-      #ifdef DEBUG
-       printf("Votante=%ld\n", (long)getpid());
-      #endif
 
       /*Exclusion Mutua Votar*/
       down(semV);
@@ -321,34 +317,22 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
 
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
       up(semC);
-      #ifdef DEBUG
-        sleep(4);
-      #endif
-      send_signal_procs(SIGUSR1, n_procs, NO_PID);
+     
+
+#ifdef DEBUG
+      sleep(4);
+#endif
+    send_signal_procs(SIGUSR1, n_procs, NO_PID);
+      /*Blocking SIGTERM in order to avoid Invalid elections where one or more voters have exited due to SIG_TERM*/
     }
-
-    /*Blocking SIGTERM in order to avoid Invalid elections where one or more voters have left due to SIG_TERM*/
-    sigemptyset(&mask2);
-    sigaddset(&mask2, SIGTERM);
-    sigprocmask(SIG_BLOCK, &mask2, NULL);
-
-    /*Getting the value of the actual mask*/
-    sigprocmask(SIG_BLOCK, NULL , &oldmask);
-
-    #ifdef DEBUG
-        printf("Bloqueamos SIGTERM %d\n", getpid());
-    #endif
-
-    /*Suspend the process waiting for SIGUSR1*/
-    while (!got_sigUSR1)
-      sigsuspend(&oldmask);
+    
 
     if (got_sigTERM)
     {
       got_sigTERM = 0;
-      #ifdef DEBUG
-        printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
-      #endif
+#ifdef DEBUG
+      printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
+#endif
       /*
       sigprocmask(SIG_UNBLOCK, &mask, NULL);
       */
