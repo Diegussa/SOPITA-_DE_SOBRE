@@ -268,7 +268,11 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
   /*Unblock SIGUSR1. SIGUSR2, SIGTERM*/
   sigprocmask(SIG_UNBLOCK, &mask2, NULL);
 
-  /*Main bucle*/
+  /*First sigUSR1 expected from the main process*/
+  while (!got_sigUSR1)
+      sigsuspend(&oldmask);
+
+  /*Main loop*/
   while (1)
   { /*
     #ifdef DEBUG
@@ -277,9 +281,13 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
       i++;
     #endif
     */
-    /*Mask to block signals SIGUSR1*/
-    while (!got_sigUSR1)
-      sigsuspend(&oldmask);
+
+   #ifdef DEBUG
+        printf(" Desbloqueamos SIGTERM %d\n", getpid());
+    #endif
+   /* Unblocking SIG_TERM */
+    sigprocmask(SIG_UNBLOCK, &mask2, NULL);
+  
 
     got_sigUSR1 = 0;
     #ifdef DEBUG
@@ -318,9 +326,23 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
       #endif
       send_signal_procs(SIGUSR1, n_procs, NO_PID);
     }
-    /*Aqui habría que sincronizar a los procesos ( que comprueben la condición de got_sigTERM a la vez (SUS))*/
-    /*Existe un arreglo que te soluciona muchos casos que es hacer el suspend de SIGUSR1 aquí en vez de arriba así más o menos van a la vez*/
-    /*Seguimos con la suposición de tiempos aun que esta es más razonable*/
+
+    /*Blocking SIGTERM in order to avoid Invalid elections where one or more voters have left due to SIG_TERM*/
+    sigemptyset(&mask2);
+    sigaddset(&mask2, SIGTERM);
+    sigprocmask(SIG_BLOCK, &mask2, NULL);
+
+    /*Getting the value of the actual mask*/
+    sigprocmask(SIG_BLOCK, NULL , &oldmask);
+
+    #ifdef DEBUG
+        printf("Bloqueamos SIGTERM %d\n", getpid());
+    #endif
+
+    /*Suspend the process waiting for SIGUSR1*/
+    while (!got_sigUSR1)
+      sigsuspend(&oldmask);
+
     if (got_sigTERM)
     {
       got_sigTERM = 0;

@@ -23,7 +23,7 @@ vot_func.o: vot_func.c vot_func.h
 	$(CC) -c $< 
 #----------------------------------------------------------------------------------------------------------------------------
 run:
-	./vote 5 1
+	./vote 3 1
 
 runv:
 	valgrind --leak-check=full --show-leak-kinds=all ./vote 2 10
