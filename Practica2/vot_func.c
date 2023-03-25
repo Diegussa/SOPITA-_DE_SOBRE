@@ -15,7 +15,7 @@
 
 #define NOMBREFICHERO "hijosPID.txt"
 #define NOMBREVOTAR "votos.txt"
-#define DEBUG
+//#define DEBUG
 
 volatile sig_atomic_t got_sigUSR1 = 0;
 volatile sig_atomic_t got_sigUSR2 = 0;
@@ -72,7 +72,7 @@ STATUS votingCarefully(char *nFichV)
 
   fwrite(&letra, sizeof(char), 1, f);
   #ifdef DEBUG
-    printf("v %c\n", letra);
+    printf("v %ld: %c\n", (long)getpid(), letra);
   #endif
   fclose(f);
 
@@ -123,10 +123,8 @@ void create_sons(int n_procs, char *nameSemV, char *namesemC, sem_t *semV, sem_t
     {
       i--;
       send_signal_procs(SIGTERM, i, NO_PID);
-
       exit(EXIT_FAILURE);
     }
-
     PIDs[i] = pid;
   }
 
@@ -174,12 +172,11 @@ void send_signal_procs(int sig, int n_hijos, long pid)
   {
     if (PIDs[i] != pid)
     {
-
       ret = kill(PIDs[i], sig);
-      if (ret)
+      if (ret) /*An extra USR1 can be send depending on the relative speed of the processes*/
       {
         fprintf(stderr, "ERROR sending %d to the son number %d \n", sig, PIDs[i]);
-        exit(EXIT_FAILURE);
+        /*exit(EXIT_FAILURE);*/
       }
     }
   }
@@ -205,7 +202,6 @@ void end_processes(int n_procs)
   #ifdef DEBUG
    printf("EXIT_STATUS %d\n", WEXITSTATUS(status));
   #endif
-    
   }
 }
 
@@ -278,13 +274,12 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
     #ifdef DEBUG
       if(i==3)
         got_sigTERM =1;
+      i++;
     #endif
-    i++;
+    
     /*Mask to block signals SIGUSR1*/
     while (!got_sigUSR1)
-    {
       sigsuspend(&oldmask);
-    }
 
     got_sigUSR1 = 0;
     #ifdef DEBUG
@@ -300,9 +295,7 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
     {
       /*Non candidate*/
       while (!got_sigUSR2)
-      {
         sigsuspend(&oldmask);
-      }
 
       got_sigUSR2 = 0;
       /*Exclusion Mutua Votar*/
@@ -317,6 +310,8 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
     else
     { /*Candidate*/
       candidato(n_procs);
+
+      /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
       up(semC);
       #ifdef DEBUG
         sleep(4);
@@ -362,50 +357,36 @@ void candidato(int n_procs)
   /*Opens file to read the votes*/
   f = fopen(NOMBREVOTAR, "rb");
   if (!f)
-  {
-    /*MIRAR*/
     free(votes);
-  }
 
   /*Read the votes every 0.1 seconds until everybody votes*/
   while (reading)
   {
-    sleep(0.1); /*CAMBIAR por un sigsuspend con alarma*/
+    usleep(1000); /*CAMBIAR por un sigsuspend con alarma*/
     fseek(f, 0, SEEK_SET);
 
     j = fread(votes, sizeof(char), n_procs - 1, f);
     if (j == (n_procs - 1))
-    {
       reading = 0;
-    }
   }
   fclose(f);
 
   /*Print the result of the votation*/
-  
   printf("Candidate %d => [", (int)getpid());
+
   /*Count the votes*/
   for (i = 0; i < n_procs - 1; i++)
   {
     if (votes[i] == 'Y')
-    {
       cont++;
-    }
-       printf(" %c", votes[i]);
-
-    
+    printf(" %c", votes[i]);
   }
 
   if (cont <= (n_procs / 2))
-  {
-    strcpy(result, "Rejected");
-  }
+    printf(" ] => Rejected\n");
   else
-  {
-    strcpy(result, "Accepted");
-  }
+    printf(" ] => Accepted\n");
 
-  printf(" ] => %s\n", result);
-
+  usleep(250000); /*Espera no activa de 250ms*/
   free(votes);
 }

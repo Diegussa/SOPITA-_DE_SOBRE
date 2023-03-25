@@ -12,26 +12,49 @@
 #define MAX_PROCS 1000
 
 volatile sig_atomic_t got_sigINT = 0;
+volatile sig_atomic_t got_sigALRM = 0;
 
+/*Handler where the the signals SIGINT and SIGALRM are going to be redirected*/
 void handler_main(int sig)
 {
-  printf("\n%d == %d SIGINT %ld\n", sig, SIGINT, (long)getpid());
-  got_sigINT = 1;
+  switch (sig)
+  {
+  case SIGINT:
+    got_sigINT = 1;
+    break;
+
+  case SIGALRM:
+    got_sigALRM = 1;
+    break;
+
+  default:
+    break;
+  }
 }
 
-/*
-void quitar(int sig){
-  printf("%d == %d SIGINT %ld \n", sig, SIGINT, (long)getpid());
-}*/
+/*Finishes process + closes the sempahores if !NULL + unlinks the sempahores if !NULL*/
+void finishProg(int n_procs, sem_t *semV, char *nameSemV, sem_t *semC, char *nameSemC)
+{
+  end_processes(n_procs);
+  if (semV)
+    sem_close(semV);
+  if (nameSemV)
+    sem_unlink(nameSemV);
+  if (semC)
+    sem_close(semC);
+  if (nameSemC)
+    sem_unlink(nameSemC);
+}
 
 int main(int argc, char *argv[])
 {
   FILE *fHijos = NULL;
   int n_procs, n_sec, i, padre = 0, pid, ret, status;
-  struct sigaction actSIGINT;
-  char nameSemV[10] = "/semV57", nameSemC[10] = "/semC57";
+  struct sigaction actPRINC;
+  char nameSemV[10] = "/semV58", nameSemC[10] = "/semC58";
   sem_t *semV, *semC;
 
+  /*Control error*/
   if (argc != 3)
   {
     fprintf(stderr, "Usage: %s <N_PROCS> <N_SECS>\n", argv[0]);
@@ -41,56 +64,63 @@ int main(int argc, char *argv[])
   n_procs = atoi(argv[1]);
   n_sec = atoi(argv[2]);
 
-
   /*Creation of the semaphores (to vote and to select the candidate)*/
   semV = sem_open(nameSemV, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
   if (semV == SEM_FAILED)
   {
+    finishProg(0, NULL, NULL, NULL, NULL);
     perror("sem_open SemV");
-    end_processes(n_procs);
-
     exit(EXIT_FAILURE);
   }
 
   semC = sem_open(nameSemC, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
   if (semC == SEM_FAILED)
   {
-    end_processes(n_procs);
-    sem_close(semV);
-    sem_unlink(nameSemV);
+    finishProg(0, semV, nameSemV, NULL, NULL);
     perror("sem_open SemC");
     exit(EXIT_FAILURE);
   }
 
+  /*Creation of the voters*/
   create_sons(n_procs, nameSemV, nameSemC, semV, semC);
 
   /*Send every son the signal SIGUSR1*/
   send_signal_procs(SIGUSR1, n_procs, NO_PID);
 
-  /*Change the SIGINT handler*/
-  actSIGINT.sa_handler = handler_main;
-  sigemptyset(&(actSIGINT.sa_mask));
-  actSIGINT.sa_flags = 0;
+  /*Change the SIGINT +SIGALRM handler*/
+  actPRINC.sa_handler = handler_main;
+  sigemptyset(&(actPRINC.sa_mask));
+  actPRINC.sa_flags = 0;
 
-  if (sigaction(SIGINT, &actSIGINT, NULL) < 0)
+  if (sigaction(SIGINT, &actPRINC, NULL) < 0)
   {
-    end_processes(n_procs);
-    sem_close(semV);
-    sem_unlink(nameSemV);
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC);
     perror("sigaction SIGINT");
     exit(EXIT_FAILURE);
   }
-  
-  while (!got_sigINT);
 
-  end_processes(n_procs);
+  if (sigaction(SIGALRM, &actPRINC, NULL) < 0)
+  {
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC);
+    perror("sigaction SIGALRM");
+    exit(EXIT_FAILURE);
+  }
+
+  /*Setting of the alarm*/
+  if (alarm(n_sec))
+    fprintf(stderr, "There is a previously established alarm\n");
+
+  while (!got_sigINT && !got_sigALRM)
+    ;
   /*Liberar todos los recursos del sistema*/
-  printf("Finishing by signal\n");
+  finishProg(n_procs, semV, nameSemV, semC, nameSemC);
 
-  sem_close(semV);
-  sem_unlink(nameSemV);
-  sem_close(semC);
-  sem_unlink(nameSemC);
+  if (got_sigALRM)
+    printf("Finishing by alarm\n");
+  else if (got_sigINT)
+    printf("Finishing by signal\n");
+  else
+    printf("Finishing by an error\n");
 
-  return 0;
+  exit(EXIT_SUCCESS);
 }

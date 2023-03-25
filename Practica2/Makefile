@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS = -ansi -pedantic -g -Wall -ggdb 
 #CFLAGS = -Wall -g -DNDEBUG #-O3 				#-DNDEBUG turns of asserts mandated by the C standards
 
-DFLAGS = -D DEBUG
+DFLAGS = -D ##DEBUG
 IFLAGS=-I. ##La opción -I se usa para indicar donde se encuentran los ficheros cabeceras (.h)
 
 LIBS= -lm -lpthread -lrt ### -lm enlaza la biblioteca matematica, -pthread enlaza la biblioteca de hilos
@@ -23,7 +23,7 @@ vot_func.o: vot_func.c vot_func.h
 	$(CC) -c $< 
 #----------------------------------------------------------------------------------------------------------------------------
 run:
-	./vote 3 10
+	./vote 5 1
 
 runv:
 	valgrind --leak-check=full --show-leak-kinds=all ./vote 2 10
