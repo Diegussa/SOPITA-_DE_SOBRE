@@ -13,6 +13,7 @@
 
 volatile sig_atomic_t got_sigINT = 0;
 volatile sig_atomic_t got_sigALRM = 0;
+volatile sig_atomic_t Error_in_voters = 0;
 
 /*Handler where the the signals SIGINT and SIGALRM are going to be redirected*/
 void handler_main(int sig)
@@ -26,16 +27,18 @@ void handler_main(int sig)
   case SIGALRM:
     got_sigALRM = 1;
     break;
-
+  case SIGUSR1:
+    Error_in_voters = 1;
   default:
     break;
   }
 }
 
 /*Finishes process + closes the sempahores if !NULL + unlinks the sempahores if !NULL*/
-void finishProg(int n_procs, sem_t *semV, char *nameSemV, sem_t *semC, char *nameSemC)
+void finishProg(int n_procs, sem_t *semV, char *nameSemV, sem_t *semC, char *nameSemC, int ERROR)
 {
-  end_processes(n_procs);
+  if(!ERROR)
+    end_processes(n_procs);
   if (semV)
     sem_close(semV);
   if (nameSemV)
@@ -51,9 +54,9 @@ int main(int argc, char *argv[])
   FILE *fHijos = NULL;
   int n_procs, n_sec, i, padre = 0, pid, ret, status;
   struct sigaction actPRINC;
-  char nameSemV[10] = "/semV58", nameSemC[10] = "/semC58";
+  char nameSemV[10] = "/semV", nameSemC[10] = "/semC";
   sem_t *semV, *semC;
-  sigset_t mask;
+  sigset_t mask, oldmask;
 
   /*Control error*/
   if (argc != 3)
@@ -61,7 +64,6 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Usage: %s <N_PROCS> <N_SECS>\n", argv[0]);
     exit(EXIT_FAILURE);
   }
-
  
   n_procs = atoi(argv[1]);
   n_sec = atoi(argv[2]);
@@ -70,7 +72,8 @@ int main(int argc, char *argv[])
   sigemptyset(&mask);
   sigaddset(&mask, SIGINT);
   sigaddset(&mask,SIGALRM);
-  sigprocmask(SIG_BLOCK,&mask, NULL);
+  sigaddset(&mask,SIGUSR1);
+  sigprocmask(SIG_BLOCK,&mask, &oldmask);
 
   /*Change the SIGINT + SIGALRM handler*/
   actPRINC.sa_handler = handler_main;
@@ -79,15 +82,22 @@ int main(int argc, char *argv[])
 
   if (sigaction(SIGINT, &actPRINC, NULL) < 0)
   {
-    finishProg(n_procs, semV, nameSemV, semC, nameSemC);
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC,ERROR);
     perror("sigaction SIGINT");
     exit(EXIT_FAILURE);
   }
 
   if (sigaction(SIGALRM, &actPRINC, NULL) < 0)
   {
-    finishProg(n_procs, semV, nameSemV, semC, nameSemC);
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC,ERROR);
     perror("sigaction SIGALRM");
+    exit(EXIT_FAILURE);
+  }
+
+  if (sigaction(SIGUSR1, &actPRINC, NULL) < 0)
+  {
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC,ERROR);
+    perror("sigaction SIGUSR1");
     exit(EXIT_FAILURE);
   }
   /*Unblocking SIG_INT and SIG_ALARM*/
@@ -97,7 +107,7 @@ int main(int argc, char *argv[])
   semV = sem_open(nameSemV, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
   if (semV == SEM_FAILED)
   {
-    finishProg(0, NULL, NULL, NULL, NULL);
+    finishProg(0, NULL, NULL, NULL, NULL,ERROR);
     perror("sem_open SemV");
     exit(EXIT_FAILURE);
   }
@@ -105,32 +115,41 @@ int main(int argc, char *argv[])
   semC = sem_open(nameSemC, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1);
   if (semC == SEM_FAILED)
   {
-    finishProg(0, semV, nameSemV, NULL, NULL);
+    finishProg(0, semV, nameSemV, NULL, NULL,ERROR);
     perror("sem_open SemC");
     exit(EXIT_FAILURE);
   }
-
+  
   /*Creation of the voters*/
   create_sons(n_procs, nameSemV, nameSemC, semV, semC);
 
   /*Send every son the signal SIGUSR1*/
-  send_signal_procs(SIGUSR1, n_procs, NO_PID);
+  
+  if(send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC,OK);
 
   /*Setting of the alarm*/
   if (alarm(n_sec))
     fprintf(stderr, "There is a previously established alarm\n");
 
-  while (!got_sigINT && !got_sigALRM)
-    ;
+  while (!got_sigINT && !got_sigALRM && !Error_in_voters)
+    sigsuspend(&oldmask);
+
   /*Liberar todos los recursos del sistema*/
-  finishProg(n_procs, semV, nameSemV, semC, nameSemC);
+  if(!Error_in_voters)
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC,OK);
 
   if (got_sigALRM)
     printf("Finishing by alarm\n");
   else if (got_sigINT)
     printf("Finishing by signal\n");
-  else
+  else{
+    finishProg(n_procs, semV, nameSemV, semC, nameSemC,ERROR);
+    (void) send_signal_procs(SIGKILL,n_procs,NO_PID);
     printf("Finishing by an error\n");
+    exit(EXIT_FAILURE);
+  }
+    
 
   exit(EXIT_SUCCESS);
 }

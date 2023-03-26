@@ -12,18 +12,22 @@ LIBS= -lm -lpthread -lrt ### -lm enlaza la biblioteca matematica, -pthread enlaz
 
 all: vote 
 
-vote: vot_mult.o vot_func.o
+vote: vot_mult.o vot_func.o vot_utils.o
 	$(CC) -o $@ $^ $(LIBS)
 
 	
-vot_mult.o: vot_mult.c vot_func.h
+vot_mult.o: vot_mult.c vot_func.h vot_utils.h
 	$(CC) -c $< 
 
-vot_func.o: vot_func.c vot_func.h
+vot_func.o: vot_func.c vot_func.h vot_utils.h
 	$(CC) -c $< 
+
+vot_utils.o: vot_utils.c vot_utils.h
+	$(CC) -c $< 
+
 #----------------------------------------------------------------------------------------------------------------------------
 run:
-	./vote 15 50
+	./vote 10 10
 
 runv:
 	valgrind --leak-check=full --show-leak-kinds=all ./vote 2 10
