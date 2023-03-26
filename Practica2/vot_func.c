@@ -14,10 +14,10 @@
 #include "vot_func.h"
 
 #define NOMBREVOTAR "votos.txt"
-#define NSIGNALS 3
+#define NSIGNALS 4
 //#define DEBUG
 #ifdef DEBUG
-  #define PRIME 70309087
+#define PRIME 330719
 #endif
 volatile sig_atomic_t got_sigUSR1 = 0;
 volatile sig_atomic_t got_sigUSR2 = 0;
@@ -30,68 +30,47 @@ void _handler_voter(int sig)
   {
   case SIGTERM:
 #ifdef DEBUG
-    printf("%d == %d SIGTERM %ld \n", sig, SIGTERM, (long)getpid());
+    printf("SIGTERM %ld \n", (long)getpid());
 #endif
     got_sigTERM = 1;
     break;
 
   case SIGUSR1:
 #ifdef DEBUG
-    printf("U1 %ld ", (long)getpid());
+    printf("USR1 %ld\n", (long)getpid());
 #endif
     got_sigUSR1 = 1;
     break;
 
   case SIGUSR2:
 #ifdef DEBUG
-    printf("U2 %ld ", (long)getpid());
+    printf("USR2 %ld\n", (long)getpid());
 #endif
     got_sigUSR2 = 1;
     break;
 
+  case SIGINT:
+#ifdef DEBUG
+    printf("SIGINT %ld\n", (long)getpid());
+#endif
+    break;
+
   default:
+#ifdef DEBUG
+    printf("SIGNAL UNKNOWN(%d) %ld\n", sig, (long)getpid());
+#endif
     break;
   }
 }
 
 /*Sends a signal to end */
-void _error_in_voters(){
+void _error_in_voters()
+{
   printf("ERROR ocurred in the son with PID=%ld\n", (long)getpid());
   if (kill(getppid(), SIGUSR1))
     fprintf(stderr, "ERROR sending the error signal in %ld\n", (long)getppid());
-  
+
   exit(EXIT_FAILURE);
-}
-
-/*Changes the handler of the specified signals*/
-int set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *oldmask)
-{
-  sigset_t mask2;
-  int i = 0;
-
-  sigemptyset(&mask2);
-  for (i = 0; i < n_signals; i++)
-  {
-    if(sigaddset(&mask2, sig[i]) == ERROR)
-      _error_in_voters();
-  }
-  /*Unblock signals*/
-  if(sigprocmask(SIG_BLOCK, &mask2, oldmask) == ERROR )
-      _error_in_voters();
-  /*Set the new signal handler*/
-  actSIG->sa_handler = _handler_voter;
-  sigemptyset(&(actSIG->sa_mask));
-  actSIG->sa_flags = 0;
-  for (i = 0; i < n_signals; i++)
-  {
-    if (sigaction(sig[i], actSIG, NULL) == ERROR )
-       _error_in_voters();
-  }
-  /*Unblock signals*/
-  if (sigprocmask(SIG_UNBLOCK, &mask2, NULL) == ERROR )
-     _error_in_voters();
-
-  return 0;
 }
 
 /*Voting when the voter has executed an effective down*/
@@ -100,10 +79,11 @@ STATUS votingCarefully(char *nFichV)
   FILE *f = NULL;
   char letra;
 
-  if (!(f = fopen(nFichV, "ab+"))){
+  if (!(f = fopen(nFichV, "ab+")))
+  {
     _error_in_voters();
 
-     return ERROR;
+    return ERROR;
   }
 
   if (rand() < (RAND_MAX / 2))
@@ -155,7 +135,7 @@ void create_sons(int n_procs, char *nameSemV, char *namesemC, sem_t *semV, sem_t
     end_processes(n_procs);
   }
 
-  if(fwrite(PIDs, sizeof(pid_t), n_procs, fHijos) == ERROR)
+  if (fwrite(PIDs, sizeof(pid_t), n_procs, fHijos) == ERROR)
     end_processes(n_procs);
   fclose(fHijos);
 
@@ -165,49 +145,40 @@ void create_sons(int n_procs, char *nameSemV, char *namesemC, sem_t *semV, sem_t
 /*Main function executed by the sons*/
 void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *semC)
 {
-  int i = 0, val, sig[NSIGNALS] = {SIGUSR1, SIGTERM, SIGUSR2};
+  int i = 0, val, sig[NSIGNALS] = {SIGUSR1, SIGTERM, SIGUSR2, SIGINT};
   struct sigaction actSIG;
-  sigset_t mask, mask2, oldmask;
+  sigset_t mask2, oldmask;
 
   srand((int)getpid());
-  /*Block permanently SIGINT*/
-  sigemptyset(&mask);
-  if(sigaddset(&mask2, SIGINT)==ERROR)
-    _error_in_voters();
-  if(sigprocmask(SIG_BLOCK, &mask, NULL)==ERROR)
-    _error_in_voters();
-
-  /*Block temporarily SIGUSR1. SIGUSR2, SIGTERM to set their handers*/
-
-  if (set_handlers(sig, NSIGNALS, &actSIG, &oldmask) == ERROR)
+  
+  /*Block temporarily SIGUSR1, SIGUSR2, SIGTERM and SIGINT to set their handers*/
+  if (set_handlers(sig, NSIGNALS, &actSIG, &oldmask, _handler_voter) == ERROR)
     _error_in_voters(n_procs);
 
-  if (sigaction(SIGINT, &actSIG, NULL) < 0)
-    _error_in_voters(semV, semC);
   /*Setting a mask with SIGTERM*/
   sigemptyset(&mask2);
-  if(sigaddset(&mask2, SIGTERM)==ERROR)
+  if (sigaddset(&mask2, SIGTERM) == ERROR)
     _error_in_voters();
-  
+
   while (1)
-  {/*Main loop*/
+  {                      /*Main loop*/
     while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
       sigsuspend(&oldmask);
     got_sigUSR1 = 0;
 
     /* Unblocking SIG_TERM */
-    if(sigprocmask(SIG_UNBLOCK, &mask2, NULL)==ERROR)
-        _error_in_voters();
-    #ifdef DEBUG
-      usleep((getpid() % n_procs) * PRIME);
-    #endif
-      /*Blocking SIGTERM in order to avoid Invalid elections where one or more voters have exited due to SIG_TERM*/
-    if(sigprocmask(SIG_BLOCK, &mask2, NULL)==ERROR)
-        _error_in_voters();
+    if (sigprocmask(SIG_UNBLOCK, &mask2, NULL) == ERROR)
+      _error_in_voters();
+#ifdef DEBUG
+    usleep((getpid() % n_procs) * PRIME);
+#endif
+    /*Blocking SIGTERM in order to avoid Invalid elections where one or more voters have exited due to SIG_TERM*/
+    if (sigprocmask(SIG_BLOCK, &mask2, NULL) == ERROR)
+      _error_in_voters();
 
     /*Proposing a candidate*/
     if (down_try(semC) == ERROR)
-    {/*Non candidate*/
+    { /*Non candidate*/
       while (!got_sigUSR2)
         sigsuspend(&oldmask);
       got_sigUSR2 = 0;
@@ -227,7 +198,7 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
 #ifdef DEBUG
       sleep(1);
 #endif
-      if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR )
+      if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
         _error_in_voters();
     }
 
@@ -250,23 +221,21 @@ void candidato(int n_procs)
   char *votes = NULL, result[15];
   FILE *f;
 
-  votes = (char *)malloc((n_procs - 1) * sizeof(char));
-  if (!votes)
+  if (!(votes = (char *)malloc((n_procs - 1) * sizeof(char))))
     _error_in_voters();
 
   /*Empty voting file*/
-  if(!(f = fopen(NOMBREVOTAR, "wb")))
+  if (!(f = fopen(NOMBREVOTAR, "wb")))
     _error_in_voters();
   fclose(f);
 
-  if (send_signal_procs(SIGUSR2, n_procs, getpid())==ERROR)
+  if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR)
     _error_in_voters();
-  
 
   /*Opens file to read the votes*/
-  if (!fopen(NOMBREVOTAR, "rb")){
+  if (!fopen(NOMBREVOTAR, "rb"))
+  {
     _error_in_voters();
-
     free(votes);
   }
 
@@ -276,12 +245,11 @@ void candidato(int n_procs)
     usleep(1000); /*CAMBIAR por un sigsuspend con alarma*/
     fseek(f, 0, SEEK_SET);
 
-    j=fread(votes, sizeof(char), n_procs - 1, f);
+    j = fread(votes, sizeof(char), n_procs - 1, f);
     if (j == (n_procs - 1))
       reading = 0;
     else if (j == ERROR)
       _error_in_voters();
-
   }
   fclose(f);
 

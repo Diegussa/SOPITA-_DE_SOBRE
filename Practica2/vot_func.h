@@ -17,8 +17,7 @@
 
 
 
-/*Changes the handler of the specified signals*/
-int set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *oldmask);
+
 
 /*Voting when the voter has executed an effective down*/
 STATUS votingCarefully();

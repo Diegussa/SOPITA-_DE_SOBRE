@@ -60,6 +60,37 @@ void end_failure(sem_t *semV, sem_t *semC)
     exit(EXIT_FAILURE);
 }
 
+/*Changes the handler of the specified signals*/
+STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *oldmask, void (*handler)(int))
+{
+  sigset_t mask2;
+  int i = 0;
+
+  sigemptyset(&mask2);
+  for (i = 0; i < n_signals; i++)
+  {
+    if (sigaddset(&mask2, sig[i]) == ERROR)
+      return ERROR;
+  }
+  /*Unblock signals*/
+  if (sigprocmask(SIG_BLOCK, &mask2, oldmask) == ERROR)
+    return ERROR;
+
+  /*Set the new signal handler*/
+  actSIG->sa_handler = handler;
+  sigemptyset(&(actSIG->sa_mask));
+  actSIG->sa_flags = 0;
+  
+  for (i = 0; i < n_signals; i++)
+  {
+    if (sigaction(sig[i], actSIG, NULL) == ERROR)
+      return ERROR;
+  }
+  /*Unblock signals*/
+  if (sigprocmask(SIG_UNBLOCK, &mask2, NULL) == ERROR)
+    return ERROR;
+}
+
 /*Sends a signal to all the sons except the one specified in the third argument*/
 STATUS send_signal_procs(int sig, int n_hijos, long pid)
 {

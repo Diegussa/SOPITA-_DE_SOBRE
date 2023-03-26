@@ -12,6 +12,7 @@
 #include <semaphore.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
 
 #define NOMBREFICHERO "hijosPID.txt"
 #define NO_PID -1
@@ -32,6 +33,10 @@ int down_try(sem_t *sem);
 void end_processes(int n_procs);
 void end_failure(sem_t *semV, sem_t *semC);
 
+
+
+/*Changes the handler of the specified signals*/
+STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *oldmask, void (*handler)(int));
 /*Sends a signal to all the sons except the one specified in the third argument*/
 STATUS send_signal_procs(int sig, int n_hijos, long pid);
 
