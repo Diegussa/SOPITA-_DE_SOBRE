@@ -13,6 +13,7 @@
 #define NSIGPRINC 3
 #define nameSemV "/semV"
 #define nameSemC "/semC"
+#define nameSemCTRL "/semCTRL"
 
 volatile sig_atomic_t got_sigINT = 0;
 volatile sig_atomic_t got_sigALRM = 0;
@@ -40,18 +41,23 @@ void handler_main(int sig)
 }
 
 /*Finishes process + closes the sempahores if !NULL + unlinks the sempahores if !NULL*/
-void finishProg(int n_procs, sem_t *semV, sem_t *semC, int ERROR)
+void finishProg(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRl, int ERROR)
 {
   if (!ERROR)
     end_processes(n_procs);
-  if (semV)
+
+  if (semV){
     sem_close(semV);
-  if (nameSemV)
     sem_unlink(nameSemV);
-  if (semC)
+  }
+  if (semC){
     sem_close(semC);
-  if (nameSemC)
     sem_unlink(nameSemC);
+  }
+  if (semCTRl){
+    sem_close(semCTRl);
+    sem_unlink(nameSemCTRL);
+  }
 }
 
 int main(int argc, char *argv[])
@@ -59,7 +65,7 @@ int main(int argc, char *argv[])
   FILE *fHijos = NULL;
   int n_procs, n_sec, i, padre = 0, pid, ret, status, signals[NSIGPRINC] = {SIGINT, SIGALRM, SIGUSR1};
   struct sigaction actPRINC;
-  sem_t *semV, *semC;
+  sem_t *semV, *semC, *semCTRL;
   sigset_t mask, oldmask;
 
   /*Control error*/
@@ -74,32 +80,39 @@ int main(int argc, char *argv[])
 
   /*Blocking temporarly SIG_INT, SIG_ALARM ad SIG_USR1 to set their handlers*/
   if(set_handlers(signals, NSIGPRINC, &actPRINC, &oldmask, handler_main) == ERROR){
-    finishProg(0, NULL, NULL, ERROR);
+    finishProg(0, NULL, NULL, NULL, ERROR);
     perror("Error setting handlers");
     exit(EXIT_FAILURE);
   }
     
-  /*Creation of the semaphores (to vote and to select the candidate)*/
+  /*Creation of the semaphores (to vote, to select the candidate and to control)*/
   if ((semV = sem_open(nameSemV, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
   {
-    finishProg(0, NULL, NULL, ERROR);
+    finishProg(0, NULL, NULL, NULL, ERROR);
     perror("sem_open SemV");
     exit(EXIT_FAILURE);
   }
 
   if ((semC = sem_open(nameSemC, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
   {
-    finishProg(0, semV, NULL, ERROR);
+    finishProg(0, semV, NULL, NULL, ERROR);
     perror("sem_open SemC");
     exit(EXIT_FAILURE);
   }
 
+  if ((semCTRL = sem_open(nameSemCTRL, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED)
+  {
+    finishProg(0, semV, semC, NULL, ERROR);
+    perror("sem_open SemCTRL");
+    exit(EXIT_FAILURE);
+  }
+
   /*Creation of the voters*/
-  create_sons(n_procs, semV, semC);
+  create_sons(n_procs, semV, semC, semCTRL);
 
   /*Send every son the signal SIGUSR1*/
   if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
-    finishProg(n_procs, semV, semC, OK);
+    finishProg(n_procs, semV, semC, semCTRL, OK);
 
   /*Setting of the alarm*/
   if (alarm(n_sec))
@@ -110,7 +123,7 @@ int main(int argc, char *argv[])
 
   /*Liberar todos los recursos del sistema*/
   if (!Error_in_voters)
-    finishProg(n_procs, semV, semC, OK);
+    finishProg(n_procs, semV, semC, semCTRL, OK);
 
   if (got_sigALRM)
     printf("Finishing by alarm\n");
@@ -118,7 +131,7 @@ int main(int argc, char *argv[])
     printf("Finishing by signal\n");
   else
   {
-    finishProg(n_procs, semV, semC, ERROR);
+    finishProg(n_procs, semV, semC, semCTRL, ERROR);
     (void)send_signal_procs(SIGKILL, n_procs, NO_PID);
     printf("Finishing by an error\n");
     exit(EXIT_FAILURE);

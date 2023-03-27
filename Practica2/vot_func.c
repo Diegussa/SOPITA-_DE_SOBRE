@@ -15,7 +15,7 @@
 
 #define NOMBREVOTAR "votos.txt"
 #define NSIGNALS 4
-// #define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 #define PRIME 330719
 #endif
@@ -81,6 +81,7 @@ STATUS votingCarefully(char *nFichV)
 
   if (!(f = fopen(nFichV, "ab+")))
   {
+
     _error_in_voters();
 
     return ERROR;
@@ -92,7 +93,10 @@ STATUS votingCarefully(char *nFichV)
     letra = 'Y';
 
   if (fwrite(&letra, sizeof(char), 1, f) == ERROR)
+  {
     _error_in_voters();
+  }
+
 #ifdef DEBUG
   printf("v %ld: %c\n", (long)getpid(), letra);
 #endif
@@ -102,7 +106,7 @@ STATUS votingCarefully(char *nFichV)
 }
 
 /*Generates n_procs and writes their PID in a file*/
-void create_sons(int n_procs, sem_t *semV, sem_t *semC)
+void create_sons(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 {
   int i;
   pid_t pid, *PIDs = NULL;
@@ -118,7 +122,7 @@ void create_sons(int n_procs, sem_t *semV, sem_t *semC)
   for (i = 0; i < n_procs; i++)
   {
     if ((pid = (int)fork()) == 0) /*Function made for the sons*/
-      voters(n_procs, semV, semC);
+      voters(n_procs, semV, semC, semCTRL);
     else if (pid == ERROR)
     {
       i--;
@@ -143,7 +147,7 @@ void create_sons(int n_procs, sem_t *semV, sem_t *semC)
 }
 
 /*Main function executed by the sons*/
-void voters(int n_procs, sem_t *semV, sem_t *semC)
+void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 {
   int i = 0, val, sig[NSIGNALS] = {SIGUSR1, SIGTERM, SIGUSR2, SIGINT};
   struct sigaction actSIG;
@@ -160,22 +164,15 @@ void voters(int n_procs, sem_t *semV, sem_t *semC)
   if (sigaddset(&mask2, SIGTERM) == ERROR)
     _error_in_voters();
 
-  while (1)
-  {                      /*Main loop*/
-    while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
-      sigsuspend(&oldmask);
-    got_sigUSR1 = 0;
+  while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
+    sigsuspend(&oldmask);
+  got_sigUSR1 = 0;
 
-    /* Unblocking SIG_TERM */
-    if (sigprocmask(SIG_UNBLOCK, &mask2, NULL) == ERROR)
-      _error_in_voters();
+  while (1)
+  { /*Main loop*/
 #ifdef DEBUG
     usleep((getpid() % n_procs) * PRIME);
 #endif
-    /*Blocking SIGTERM in order to avoid Invalid elections where one or more voters have exited due to SIG_TERM*/
-    if (sigprocmask(SIG_BLOCK, &mask2, NULL) == ERROR)
-      _error_in_voters();
-
     /*Proposing a candidate*/
     if (down_try(semC) == ERROR)
     { /*Non candidate*/
@@ -184,26 +181,38 @@ void voters(int n_procs, sem_t *semV, sem_t *semC)
       got_sigUSR2 = 0;
 
       /*Exclusion Mutua Votar*/
-      if(down(semV)==ERROR)
-        _error_in_voters();
+      while (down(semV) == ERROR)
+        ;
       votingCarefully(NOMBREVOTAR);
-      if(up(semV)==ERROR)
+      if (up(semV) == ERROR)
+      {
         _error_in_voters();
+      }
     }
     else
     { /*Candidate*/
-      candidato(n_procs);
+      candidato(n_procs, semCTRL);
 
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
-      if(up(semC)==ERROR)
+      if (up(semC) == ERROR)
+      {
         _error_in_voters();
+      }
 
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
+      {
+
         _error_in_voters();
+      }
     }
+
+    while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
+      sigsuspend(&oldmask);
+    got_sigUSR1 = 0;
 
     if (got_sigTERM)
     {
+      up(semCTRL);
 #ifdef DEBUG
       printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
 #endif
@@ -216,7 +225,7 @@ void voters(int n_procs, sem_t *semV, sem_t *semC)
 }
 
 /*Main function executed by the son candidato*/
-void candidato(int n_procs)
+void candidato(int n_procs, sem_t *semCTRL)
 {
   int reading = 1, i, cont = 0, j;
   char *votes = NULL, result[15];
@@ -231,7 +240,9 @@ void candidato(int n_procs)
   fclose(f);
 
   if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR)
+  {
     _error_in_voters();
+  }
 
   /*Opens file to read the votes*/
   if (!fopen(NOMBREVOTAR, "rb"))
@@ -243,6 +254,12 @@ void candidato(int n_procs)
   /*Read the votes every 0.1 seconds until everybody votes*/
   while (reading)
   {
+    if (down_try(semCTRL) == OK)
+    {
+      fclose(f);
+      return;
+    }
+
     usleep(1000); /*CAMBIAR por un sigsuspend con alarma*/
     fseek(f, 0, SEEK_SET);
 
