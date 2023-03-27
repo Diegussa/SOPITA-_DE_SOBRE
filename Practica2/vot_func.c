@@ -15,7 +15,7 @@
 
 #define NOMBREVOTAR "votos.txt"
 #define NSIGNALS 4
-// #define DEBUG
+/*#define DEBUG*/
 #ifdef DEBUG
 #define PRIME 330719
 #endif
@@ -244,7 +244,7 @@ void candidato(int n_procs, sem_t *semCTRL)
       return;
     }
 
-    usleep(1000); /*CAMBIAR por un sigsuspend con alarma*/
+    usleep(1000);
     fseek(f, 0, SEEK_SET);
 
     j = fread(votes, sizeof(char), n_procs - 1, f);
