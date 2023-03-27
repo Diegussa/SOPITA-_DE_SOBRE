@@ -29,7 +29,7 @@ STATUS votingCarefully();
  *
  * @return nothing
  */
-void create_sons(int n_procs, char *nameSemV, char *nameSemC, sem_t *semV, sem_t *semC);
+void create_sons(int n_procs, sem_t *semV, sem_t *semC);
 
 /**
  * @brief Main function executed by the sons
@@ -37,7 +37,7 @@ void create_sons(int n_procs, char *nameSemV, char *nameSemC, sem_t *semV, sem_t
  *
  * @return nothing
  */
-void voters(char * semVoter, char * semCand,int n_procs, sem_t *semV, sem_t *semC);
+void voters(int n_procs, sem_t *semV, sem_t *semC);
 
 /**
  * @brief Main function executed by the son candidato

@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
   }
 
   /*Creation of the voters*/
-  create_sons(n_procs, nameSemV, nameSemC, semV, semC);
+  create_sons(n_procs, semV, semC);
 
   /*Send every son the signal SIGUSR1*/
   if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)

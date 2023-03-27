@@ -15,7 +15,7 @@
 
 #define NOMBREVOTAR "votos.txt"
 #define NSIGNALS 4
-//#define DEBUG
+// #define DEBUG
 #ifdef DEBUG
 #define PRIME 330719
 #endif
@@ -102,7 +102,7 @@ STATUS votingCarefully(char *nFichV)
 }
 
 /*Generates n_procs and writes their PID in a file*/
-void create_sons(int n_procs, char *nameSemV, char *namesemC, sem_t *semV, sem_t *semC)
+void create_sons(int n_procs, sem_t *semV, sem_t *semC)
 {
   int i;
   pid_t pid, *PIDs = NULL;
@@ -118,7 +118,7 @@ void create_sons(int n_procs, char *nameSemV, char *namesemC, sem_t *semV, sem_t
   for (i = 0; i < n_procs; i++)
   {
     if ((pid = (int)fork()) == 0) /*Function made for the sons*/
-      voters(nameSemV, namesemC, n_procs, semV, semC);
+      voters(n_procs, semV, semC);
     else if (pid == ERROR)
     {
       i--;
@@ -143,14 +143,14 @@ void create_sons(int n_procs, char *nameSemV, char *namesemC, sem_t *semV, sem_t
 }
 
 /*Main function executed by the sons*/
-void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *semC)
+void voters(int n_procs, sem_t *semV, sem_t *semC)
 {
   int i = 0, val, sig[NSIGNALS] = {SIGUSR1, SIGTERM, SIGUSR2, SIGINT};
   struct sigaction actSIG;
   sigset_t mask2, oldmask;
 
   srand((int)getpid());
-  
+
   /*Block temporarily SIGUSR1, SIGUSR2, SIGTERM and SIGINT to set their handers*/
   if (set_handlers(sig, NSIGNALS, &actSIG, &oldmask, _handler_voter) == ERROR)
     _error_in_voters(n_procs);
@@ -184,16 +184,19 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
       got_sigUSR2 = 0;
 
       /*Exclusion Mutua Votar*/
-      down(semV);
+      if(down(semV)==ERROR)
+        _error_in_voters();
       votingCarefully(NOMBREVOTAR);
-      up(semV);
+      if(up(semV)==ERROR)
+        _error_in_voters();
     }
     else
     { /*Candidate*/
       candidato(n_procs);
 
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
-      up(semC);
+      if(up(semC)==ERROR)
+        _error_in_voters();
 
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
         _error_in_voters();
