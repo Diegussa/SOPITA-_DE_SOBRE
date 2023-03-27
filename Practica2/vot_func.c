@@ -15,7 +15,7 @@
 
 #define NOMBREVOTAR "votos.txt"
 #define NSIGNALS 4
-//#define DEBUG
+// #define DEBUG
 #ifdef DEBUG
 #define PRIME 330719
 #endif
@@ -80,12 +80,7 @@ STATUS votingCarefully(char *nFichV)
   char letra;
 
   if (!(f = fopen(nFichV, "ab+")))
-  {
-
     _error_in_voters();
-
-    return ERROR;
-  }
 
   if (rand() < (RAND_MAX / 2))
     letra = 'N';
@@ -93,9 +88,7 @@ STATUS votingCarefully(char *nFichV)
     letra = 'Y';
 
   if (fwrite(&letra, sizeof(char), 1, f) == ERROR)
-  {
     _error_in_voters();
-  }
 
 #ifdef DEBUG
   printf("v %ld: %c\n", (long)getpid(), letra);
@@ -193,10 +186,10 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
       if (up(semC) == ERROR)
-      _error_in_voters();
+        _error_in_voters();
 
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
-      _error_in_voters();
+        _error_in_voters();
     }
 
     while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
@@ -233,15 +226,13 @@ void candidato(int n_procs, sem_t *semCTRL)
   fclose(f);
 
   if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR)
-  {
     _error_in_voters();
-  }
 
   /*Opens file to read the votes*/
   if (!fopen(NOMBREVOTAR, "rb"))
   {
-    _error_in_voters();
     free(votes);
+    _error_in_voters();
   }
 
   /*Read the votes every 0.1 seconds until everybody votes*/
