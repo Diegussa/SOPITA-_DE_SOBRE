@@ -15,10 +15,8 @@
 
 #define NOMBREVOTAR "votos.txt"
 #define NSIGNALS 4
-/*#define DEBUG*/
-#ifdef DEBUG
-#define PRIME 330719
-#endif
+#define TEST
+
 volatile sig_atomic_t got_sigUSR1 = 0;
 volatile sig_atomic_t got_sigUSR2 = 0;
 volatile sig_atomic_t got_sigTERM = 0;
@@ -142,20 +140,20 @@ void create_sons(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 /*Main function executed by the sons*/
 void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 {
-  int i = 0, val, sig[NSIGNALS] = {SIGUSR1, SIGTERM, SIGUSR2, SIGINT};
+  int i = 0, sig[NSIGNALS] = {SIGUSR1, SIGTERM, SIGUSR2, SIGINT};
   struct sigaction actSIG;
   sigset_t mask2, oldmask;
+#ifdef DEBUG
+    int aux;
+#endif
 
   srand((int)getpid());
-
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
   /*Block temporarily SIGUSR1, SIGUSR2, SIGTERM and SIGINT to set their handers*/
   if (set_handlers(sig, NSIGNALS, &actSIG, &oldmask, _handler_voter) == ERROR)
     _error_in_voters(n_procs);
-
-  /*Setting a mask with SIGTERM*/
-  sigemptyset(&mask2);
-  if (sigaddset(&mask2, SIGTERM) == ERROR)
-    _error_in_voters();
 
   while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
     sigsuspend(&oldmask);
@@ -163,19 +161,24 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 
   while (1)
   { /*Main loop*/
-#ifdef DEBUG
-    usleep((getpid() % n_procs) * PRIME);
+#ifdef TEST
+      usleep(rand()%getpid());
 #endif
     /*Proposing a candidate*/
     if (down_try(semC) == ERROR)
     { /*Non candidate*/
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
       while (!got_sigUSR2)
         sigsuspend(&oldmask);
       got_sigUSR2 = 0;
 
       /*Exclusion Mutua Votar*/
-      while (down(semV) == ERROR)
-        ;
+      while (down(semV) == ERROR);
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
       votingCarefully(NOMBREVOTAR);
       if (up(semV) == ERROR)
         _error_in_voters();
@@ -183,7 +186,9 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
     else
     { /*Candidate*/
       candidato(n_procs, semCTRL);
-
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
       if (up(semC) == ERROR)
         _error_in_voters();
@@ -191,19 +196,30 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
         _error_in_voters();
     }
-
+#ifdef DEBUG
+    sem_getvalue(semCTRL,&aux);
+    printf("PREUSR1 %d, %d\n", getpid(),aux);
+#endif 
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
     while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
       sigsuspend(&oldmask);
     got_sigUSR1 = 0;
-
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
     if (got_sigTERM)
     {
       up(semCTRL);
+      kill(getppid(),SIGINT);
 #ifdef DEBUG
       printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
 #endif
       sem_close(semV);
       sem_close(semC);
+      sem_close(semCTRL);
+
 
       exit(EXIT_SUCCESS);
     }
@@ -224,10 +240,14 @@ void candidato(int n_procs, sem_t *semCTRL)
   if (!(f = fopen(NOMBREVOTAR, "wb")))
     _error_in_voters();
   fclose(f);
-
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
   if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR)
     _error_in_voters();
-
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
   /*Opens file to read the votes*/
   if (!fopen(NOMBREVOTAR, "rb"))
   {
@@ -238,8 +258,12 @@ void candidato(int n_procs, sem_t *semCTRL)
   /*Read the votes every 0.1 seconds until everybody votes*/
   while (reading)
   {
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
     if (down_try(semCTRL) == OK)
     {
+      up(semCTRL);
       fclose(f);
       return;
     }
@@ -252,12 +276,17 @@ void candidato(int n_procs, sem_t *semCTRL)
       reading = 0;
     else if (j == ERROR)
       _error_in_voters();
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
   }
   fclose(f);
 
   /*Print the result of the votation*/
   printf("Candidate %d => [", (int)getpid());
-
+#ifdef TEST
+      usleep(rand()%getpid());
+#endif
   /*Count the votes*/
   for (i = 0; i < n_procs - 1; i++)
   {

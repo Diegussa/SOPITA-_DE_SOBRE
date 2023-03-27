@@ -34,6 +34,10 @@ void handler_main(int sig)
 
   case SIGUSR1:
     Error_in_voters = 1;
+#ifdef DEBUG
+    printf("ERROR in sons\n");
+#endif
+    break;
 
   default:
     break;
@@ -43,7 +47,7 @@ void handler_main(int sig)
 /*Finishes process + closes the sempahores if !NULL + unlinks the sempahores if !NULL*/
 void finishProg(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRl, int ERROR)
 {
-  if (!ERROR)
+  if (!ERROR) /*Si no ha dado error*/
     end_processes(n_procs);
 
   if (semV){

@@ -14,6 +14,8 @@
 #include <pthread.h>
 #include <signal.h>
 
+//#define DEBUG
+
 #define NOMBREFICHERO "hijosPID.txt"
 #define NO_PID -1
 typedef enum
