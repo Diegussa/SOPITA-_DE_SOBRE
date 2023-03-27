@@ -1,5 +1,5 @@
 #include <signal.h>
-#include <stdio.h>
+#include <stdio.h>    
 #include <stdlib.h>
 #include <fcntl.h>
 #include <semaphore.h>
@@ -74,6 +74,9 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Usage: %s <N_PROCS> <N_SECS>\n", argv[0]);
     exit(EXIT_FAILURE);
   }
+  close(1);
+  close(2);
+  close(3);
 
   n_procs = atoi(argv[1]);
   n_sec = atoi(argv[2]);

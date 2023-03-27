@@ -185,9 +185,7 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
         ;
       votingCarefully(NOMBREVOTAR);
       if (up(semV) == ERROR)
-      {
         _error_in_voters();
-      }
     }
     else
     { /*Candidate*/
@@ -195,15 +193,10 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
       if (up(semC) == ERROR)
-      {
-        _error_in_voters();
-      }
+      _error_in_voters();
 
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
-      {
-
-        _error_in_voters();
-      }
+      _error_in_voters();
     }
 
     while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
