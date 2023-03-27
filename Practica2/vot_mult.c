@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
   if (alarm(n_sec))
     fprintf(stderr, "There is a previously established alarm\n");
 
+
   while (!got_sigINT && !got_sigALRM && !Error_in_voters)
     sigsuspend(&oldmask);
 

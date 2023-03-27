@@ -36,7 +36,10 @@ void end_processes(int n_procs)
 {
     int i, status;
     /*Enviar a cada hijo un SIGTERM*/
-    send_signal_procs(SIGTERM, n_procs, NO_PID);
+    if(send_signal_procs(SIGTERM, n_procs, NO_PID)==ERROR){
+      return;
+    }
+
     /*Waiting fot the voters*/
     for (i = 0; i < n_procs; i++)
     {
@@ -118,8 +121,13 @@ STATUS send_signal_procs(int sig, int n_hijos, long pid)
   /*Sending the signal to every son*/
   for (i = 0; i < n_hijos; i++)
   {
-    if (PIDs[i] != pid)
-        kill(PIDs[i], sig);
+    if (PIDs[i] != pid){
+        if(kill(PIDs[i], sig) == ERROR){
+            return ERROR;
+        }
+          
+    }
+        
   }
 
   fclose(fHijos);

@@ -64,11 +64,18 @@ void _handler_voter(int sig)
 /*Sends a signal to end */
 void _error_in_voters()
 {
-  printf("ERROR ocurred in the son with PID=%ld\n", (long)getpid());
-  if (kill(getppid(), SIGUSR1))
+#ifdef DEBUG
+   printf("ERROR ocurred in the son with PID=%ld\n", (long)getpid());
+#endif
+ 
+  if (kill(getppid(), SIGUSR1)){
+    #ifdef DEBUG
     fprintf(stderr, "ERROR sending the error signal in %ld\n", (long)getppid());
+    #endif
+  }
+    
 
-  exit(EXIT_FAILURE);
+  //exit(EXIT_FAILURE);
 }
 
 /*Voting when the voter has executed an effective down*/
@@ -114,10 +121,12 @@ void create_sons(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
   {
     if ((pid = (int)fork()) == 0) /*Function made for the sons*/
       voters(n_procs, semV, semC, semCTRL);
-    else if (pid == ERROR)
+    else if (pid == ERROR||1)
     {
-      i--;
-      end_processes(i);
+      if(i!=0)
+        end_processes(i);
+      kill(getpid(),SIGUSR1);
+      return;
     }
     PIDs[i] = pid;
   }
@@ -173,7 +182,6 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
       while (!got_sigUSR2)
         sigsuspend(&oldmask);
       got_sigUSR2 = 0;
-
       /*Exclusion Mutua Votar*/
       while (down(semV) == ERROR);
 #ifdef TEST
@@ -195,6 +203,8 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
         _error_in_voters();
+      
+        
     }
 #ifdef DEBUG
     sem_getvalue(semCTRL,&aux);
@@ -212,7 +222,7 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
     if (got_sigTERM)
     {
       up(semCTRL);
-      kill(getppid(),SIGINT);
+      kill(getppid(),SIGUSR1);
 #ifdef DEBUG
       printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
 #endif
@@ -233,7 +243,7 @@ void candidato(int n_procs, sem_t *semCTRL)
   char *votes = NULL, result[15];
   FILE *f;
 
-  if (!(votes = (char *)malloc((n_procs - 1) * sizeof(char))))
+  if (!(votes = (char *)malloc((n_procs) * sizeof(char))))
     _error_in_voters();
 
   /*Empty voting file*/
@@ -243,6 +253,11 @@ void candidato(int n_procs, sem_t *semCTRL)
 #ifdef TEST
       usleep(rand()%getpid());
 #endif
+  /*Candidate votes*/
+  if(votingCarefully(NOMBREVOTAR)==ERROR){
+    _error_in_voters();
+    return;
+  }
   if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR)
     _error_in_voters();
 #ifdef TEST
@@ -271,8 +286,8 @@ void candidato(int n_procs, sem_t *semCTRL)
     usleep(1000);
     fseek(f, 0, SEEK_SET);
 
-    j = fread(votes, sizeof(char), n_procs - 1, f);
-    if (j == (n_procs - 1))
+    j = fread(votes, sizeof(char), n_procs , f);
+    if (j == (n_procs))
       reading = 0;
     else if (j == ERROR)
       _error_in_voters();
@@ -288,7 +303,7 @@ void candidato(int n_procs, sem_t *semCTRL)
       usleep(rand()%getpid());
 #endif
   /*Count the votes*/
-  for (i = 0; i < n_procs - 1; i++)
+  for (i = 0; i < n_procs ; i++)
   {
     if (votes[i] == 'Y')
       cont++;
