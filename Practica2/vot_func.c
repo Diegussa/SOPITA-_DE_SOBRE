@@ -195,9 +195,6 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
       up(semC);
 
-#ifdef DEBUG
-      sleep(1);
-#endif
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
         _error_in_voters();
     }
@@ -215,6 +212,7 @@ void voters(char *nameSemV, char *nameSemC, int n_procs, sem_t *semV, sem_t *sem
   }
 }
 
+/*Main function executed by the son candidato*/
 void candidato(int n_procs)
 {
   int reading = 1, i, cont = 0, j;

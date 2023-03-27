@@ -1,5 +1,5 @@
 /**
- * @file vot_utils.h
+ * @file vot_func.h
  * @author Diego Rodríguez y Alejandro García
  * @brief 
  * @version 
@@ -15,18 +15,35 @@
 
 #include "vot_utils.h"
 
-
-
-
-
-/*Voting when the voter has executed an effective down*/
+/**
+ * @brief Voting when the voter has executed an effective down
+ * @author Alejandro García and Diego Rodríguez
+ *
+ * @return OK, if everything goes well or ERROR if there was some mistake
+ */
 STATUS votingCarefully();
 
-/*Generates n_procs and writes their PID in a file*/
+/**
+ * @brief Generates n_procs and writes their PID in a file
+ * @author Alejandro García and Diego Rodríguez
+ *
+ * @return nothing
+ */
 void create_sons(int n_procs, char *nameSemV, char *nameSemC, sem_t *semV, sem_t *semC);
 
-/*Main function executed by the sons*/
+/**
+ * @brief Main function executed by the sons
+ * @author Alejandro García and Diego Rodríguez
+ *
+ * @return nothing
+ */
 void voters(char * semVoter, char * semCand,int n_procs, sem_t *semV, sem_t *semC);
 
+/**
+ * @brief Main function executed by the son candidato
+ * @author Alejandro García and Diego Rodríguez
+ *
+ * @return nothing
+ */
 void candidato(int n_procs);
 #endif

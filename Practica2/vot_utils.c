@@ -13,14 +13,13 @@
 
 #include "vot_utils.h"
 
-
-/*Returns 0 on succes, -1 on Error and more info in errno*/
+/*Adds 1 unit to the semaphore*/
 int up(sem_t *sem)
 {
     return sem_post(sem);
 }
 
-/*Returns 0 on succes, -1 on Error and more info in errno*/
+/*Blocking call to get the semaphore*/
 int down(sem_t *sem)
 {
     return sem_wait(sem);
@@ -32,6 +31,7 @@ int down_try(sem_t *sem)
     return sem_trywait(sem);
 }
 
+/*Finishes the processes and waits for the sons*/
 void end_processes(int n_procs)
 {
     int i, status;
@@ -41,21 +41,19 @@ void end_processes(int n_procs)
     for (i = 0; i < n_procs; i++)
     {
         wait(&status);
-        if (WEXITSTATUS(status) == EXIT_FAILURE)
-            printf("Error waiting\n");
 #ifdef DEBUG
         printf("EXIT_STATUS %d\n", WEXITSTATUS(status));
 #endif
     }
 }
 
+/*Closes the semaphores and exits with failure*/
 void end_failure(sem_t *semV, sem_t *semC)
 {
-    if (semV && semC)
-    {
-        sem_close(semV);
-        sem_close(semC);
-    }
+    if (semV)
+      sem_close(semV);
+    if(semC)
+      sem_close(semC);
 
     exit(EXIT_FAILURE);
 }
