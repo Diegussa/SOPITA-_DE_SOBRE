@@ -36,14 +36,13 @@ void end_processes(int n_procs)
 {
     int i, status;
     /*Enviar a cada hijo un SIGTERM*/
-    if(send_signal_procs(SIGTERM, n_procs, NO_PID)==ERROR){
-      return;
-    }
-
+    send_signal_procs(SIGTERM, n_procs, NO_PID);
+    
     /*Waiting fot the voters*/
     for (i = 0; i < n_procs; i++)
     {
         wait(&status);
+
 #ifdef DEBUG
         printf("EXIT_STATUS %d\n", WEXITSTATUS(status));
 #endif
@@ -138,5 +137,11 @@ STATUS send_signal_procs(int sig, int n_hijos, long pid)
 
 void nanorandsleep(){
   struct timespec time ={0,rand()%BIG_PRIME};
+  nanosleep(&time, NULL);
+}
+
+
+void ournanosleep(int t){
+struct timespec time ={0,t};
   nanosleep(&time, NULL);
 }

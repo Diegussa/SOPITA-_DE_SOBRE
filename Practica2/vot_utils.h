@@ -14,7 +14,8 @@
 #include <pthread.h>
 #include <signal.h>
 
-#define DEBUG
+//#define DEBUG
+#define TEST
 
 #define NOMBREFICHERO "hijosPID.txt"
 #define NO_PID -1
@@ -89,5 +90,13 @@ STATUS send_signal_procs(int sig, int n_hijos, long pid);
  * @return Nothing
  */
 void nanorandsleep();
+
+/**
+ * @brief Waits a given number of nanoseconds
+ * @author Alejandro García and Diego Rodríguez
+ *
+ * @return Nothing
+ */
+void ournanosleep(int t);
 
 #endif

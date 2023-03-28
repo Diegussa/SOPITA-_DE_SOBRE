@@ -16,6 +16,9 @@
 #define NOMBREVOTAR "votos.txt"
 #define NSIGNALS 4
 
+#define WAITVOTE 1000000
+#define WAITCANDIDATE 250000000
+
 volatile sig_atomic_t got_sigUSR1 = 0;
 volatile sig_atomic_t got_sigUSR2 = 0;
 volatile sig_atomic_t got_sigTERM = 0;
@@ -66,7 +69,6 @@ void _error_in_voters()
 #ifdef DEBUG
   printf("ERROR ocurred in the son with PID=%ld\n", (long)getpid());
 #endif
-
   if (kill(getppid(), SIGUSR1))
   {
 #ifdef DEBUG
@@ -163,48 +165,56 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 #endif
 
   srand((int)getpid());
-#ifdef TEST
-  usleep(rand() % getpid());
-#endif
+
   /*Block temporarily SIGUSR1, SIGUSR2, SIGTERM and SIGINT to set their handers*/
   if (set_handlers(sig, NSIGNALS, &actSIG, &oldmask, _handler_voter) == ERROR)
   {
+    #ifdef DEBUG
+      printf("Error en el set handler\n");
+    #endif
     _error_in_voters(n_procs);
   }
-
+#ifdef TEST
+  nanorandsleep();
+#endif
   while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
     sigsuspend(&oldmask);
   got_sigUSR1 = 0;
 
+  #ifdef DEBUG
+      printf("Bucle principal");
+    #endif
   while (1)
   { /*Main loop*/
 #ifdef TEST
-    usleep(rand() % getpid());
+    nanorandsleep();
 #endif
+    
     /*Proposing a candidate*/
     if (down_try(semC) == ERROR)
     { /*Non candidate*/
 #ifdef TEST
-      usleep(rand() % getpid());
+     nanorandsleep();
 #endif
       while (!got_sigUSR2)
         sigsuspend(&oldmask);
       got_sigUSR2 = 0;
       /*Exclusion Mutua Votar*/
-      while (down(semV) == ERROR)
-        ;
+      while (down(semV) == ERROR);
 #ifdef TEST
-      usleep(rand() % getpid());
+      nanorandsleep();
 #endif
       votingCarefully(NOMBREVOTAR);
-      if (up(semV) == ERROR)
+      if (up(semV) == ERROR){
+        send_signal_procs(SIGUSR2, n_procs, getpid());
         _error_in_voters();
+      }
     }
     else
     { /*Candidate*/
       candidato(n_procs, semCTRL);
 #ifdef TEST
-      usleep(rand() % getpid());
+      nanorandsleep();
 #endif
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
       if (up(semC) == ERROR)
@@ -214,7 +224,6 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
       {
-        printf("asdf1\n");
         _error_in_voters();
       }
     }
@@ -223,13 +232,14 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
     printf("PREUSR1 %d, %d\n", getpid(), aux);
 #endif
 #ifdef TEST
-    usleep(rand() % getpid());
+    nanorandsleep();
 #endif
-    while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
+    while (!got_sigUSR1 && !got_sigTERM) /*Suspend the process waiting for SIGUSR1*/
       sigsuspend(&oldmask);
     got_sigUSR1 = 0;
+
 #ifdef TEST
-    usleep(rand() % getpid());
+    nanorandsleep();
 #endif
     if (got_sigTERM)
     {
@@ -255,6 +265,7 @@ void candidato(int n_procs, sem_t *semCTRL)
 
   if (!(votes = (char *)malloc((n_procs) * sizeof(char))))
   {
+    send_signal_procs(SIGUSR2, n_procs, getpid());
     _error_in_voters();
     return;
   }
@@ -262,28 +273,28 @@ void candidato(int n_procs, sem_t *semCTRL)
   /*Empty voting file*/
   if (!(f = fopen(NOMBREVOTAR, "wb")))
   {
+    send_signal_procs(SIGUSR2, n_procs, getpid());
     _error_in_voters();
     return;
   }
   fclose(f);
 #ifdef TEST
-  usleep(rand() % getpid());
+  nanorandsleep();
 #endif
   /*Candidate votes*/
   if (votingCarefully(NOMBREVOTAR) == ERROR)
   {
-    printf("rtcsavx\n");
+    send_signal_procs(SIGUSR2, n_procs, getpid());
     _error_in_voters();
     return;
   }
   if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR)
   {
-    printf("asdf2\n");
     _error_in_voters();
     return;
   }
 #ifdef TEST
-  usleep(rand() % getpid());
+    nanorandsleep();
 #endif
   /*Opens file to read the votes*/
   if (!fopen(NOMBREVOTAR, "rb"))
@@ -295,21 +306,21 @@ void candidato(int n_procs, sem_t *semCTRL)
 
   /*Read the votes every 0.1 seconds until everybody votes*/
   while (reading)
-  {sleep(8);
+  {
 #ifdef TEST
-    usleep(rand() % getpid());
+    nanorandsleep();
 #endif
+
     if (down_try(semCTRL) == OK)
     {
-#ifdef DEBUG
-      printf("Falta un votante, finalización de votacion\n");
-#endif
+      #ifdef DEBUG
+        printf("Falta un votante, finalización de votacion\n");
+      #endif
       up(semCTRL);
       fclose(f);
       return;
     }
-
-    usleep(1000);
+    ournanosleep(WAITVOTE);
     fseek(f, 0, SEEK_SET);
 
     j = fread(votes, sizeof(char), n_procs, f);
@@ -321,7 +332,7 @@ void candidato(int n_procs, sem_t *semCTRL)
       return;
     }
 #ifdef TEST
-    usleep(rand() % getpid());
+    nanorandsleep();
 #endif
   }
   fclose(f);
@@ -329,7 +340,7 @@ void candidato(int n_procs, sem_t *semCTRL)
   /*Print the result of the votation*/
   printf("Candidate %d => [", (int)getpid());
 #ifdef TEST
-  usleep(rand() % getpid());
+  nanorandsleep();
 #endif
   /*Count the votes*/
   for (i = 0; i < n_procs; i++)
@@ -343,7 +354,7 @@ void candidato(int n_procs, sem_t *semCTRL)
     printf(" ] => Rejected\n");
   else
     printf(" ] => Accepted\n");
-
-  usleep(250000);
+  
+  ournanosleep(WAITCANDIDATE);
   free(votes);
 }

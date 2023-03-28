@@ -45,9 +45,9 @@ void handler_main(int sig)
 }
 
 /*Finishes process + closes the sempahores if !NULL + unlinks the sempahores if !NULL*/
-void finishProg(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRl, int ERROR)
+void finishProg(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRl,STATUS ERROR)
 {
-  if (!ERROR) /*Si no ha dado error*/
+  if(!ERROR)
     end_processes(n_procs);
 
   if (semV){
