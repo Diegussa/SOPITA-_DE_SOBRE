@@ -84,16 +84,21 @@ STATUS votingCarefully(char *nFichV)
   FILE *f = NULL;
   char letra;
 
-  if (!(f = fopen(nFichV, "ab+")))
+  if (!(f = fopen(nFichV, "ab+"))){
     _error_in_voters();
+    return ERROR;
+  }
 
   if (rand() < (RAND_MAX / 2))
     letra = 'N';
   else
     letra = 'Y';
 
-  if (fwrite(&letra, sizeof(char), 1, f) == ERROR)
+  if (fwrite(&letra, sizeof(char), 1, f) == ERROR){
+    fclose(f);
     _error_in_voters();
+    return ERROR;
+  }
 
 #ifdef DEBUG
   printf("v %ld: %c\n", (long)getpid(), letra);
@@ -121,7 +126,7 @@ void create_sons(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
   {
     if ((pid = (int)fork()) == 0) /*Function made for the sons*/
       voters(n_procs, semV, semC, semCTRL);
-    else if (pid == ERROR||1)
+    else if (pid == ERROR)
     {
       if(i!=0)
         end_processes(i);
@@ -161,8 +166,9 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
       usleep(rand()%getpid());
 #endif
   /*Block temporarily SIGUSR1, SIGUSR2, SIGTERM and SIGINT to set their handers*/
-  if (set_handlers(sig, NSIGNALS, &actSIG, &oldmask, _handler_voter) == ERROR)
-    _error_in_voters(n_procs);
+  if (set_handlers(sig, NSIGNALS, &actSIG, &oldmask, _handler_voter) == ERROR){
+      _error_in_voters(n_procs);
+  }
 
   while (!got_sigUSR1) /*Suspend the process waiting for SIGUSR1*/
     sigsuspend(&oldmask);
@@ -198,11 +204,13 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
       usleep(rand()%getpid());
 #endif
       /*Release the sem to choose a new candidate + send USR1 to start a new voting*/
-      if (up(semC) == ERROR)
+      if (up(semC) == ERROR){
         _error_in_voters();
+      }
 
-      if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
-        _error_in_voters();
+      if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR){
+       _error_in_voters();
+      }
       
         
     }
@@ -243,12 +251,16 @@ void candidato(int n_procs, sem_t *semCTRL)
   char *votes = NULL, result[15];
   FILE *f;
 
-  if (!(votes = (char *)malloc((n_procs) * sizeof(char))))
+  if (!(votes = (char *)malloc((n_procs) * sizeof(char)))){
     _error_in_voters();
+    return;
+  }
 
   /*Empty voting file*/
-  if (!(f = fopen(NOMBREVOTAR, "wb")))
+  if (!(f = fopen(NOMBREVOTAR, "wb"))){
     _error_in_voters();
+    return;
+  }
   fclose(f);
 #ifdef TEST
       usleep(rand()%getpid());
@@ -258,8 +270,10 @@ void candidato(int n_procs, sem_t *semCTRL)
     _error_in_voters();
     return;
   }
-  if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR)
+  if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR){
     _error_in_voters();
+    return;
+  }
 #ifdef TEST
       usleep(rand()%getpid());
 #endif
@@ -268,6 +282,7 @@ void candidato(int n_procs, sem_t *semCTRL)
   {
     free(votes);
     _error_in_voters();
+    return;
   }
 
   /*Read the votes every 0.1 seconds until everybody votes*/
@@ -289,8 +304,10 @@ void candidato(int n_procs, sem_t *semCTRL)
     j = fread(votes, sizeof(char), n_procs , f);
     if (j == (n_procs))
       reading = 0;
-    else if (j == ERROR)
+    else if (j == ERROR){
       _error_in_voters();
+      return;
+    }
 #ifdef TEST
       usleep(rand()%getpid());
 #endif
