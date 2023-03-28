@@ -18,6 +18,8 @@
 
 #define NOMBREFICHERO "hijosPID.txt"
 #define NO_PID -1
+#define BIG_PRIME 952251017
+
 typedef enum
 {
   ERROR = -1,
@@ -79,5 +81,13 @@ STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t 
  * @return OK, if everything goes well or ERROR if there was some mistake
  */
 STATUS send_signal_procs(int sig, int n_hijos, long pid);
+
+/**
+ * @brief Waits a random number of nanoseconds
+ * @author Alejandro García and Diego Rodríguez
+ *
+ * @return Nothing
+ */
+void nanorandsleep();
 
 #endif

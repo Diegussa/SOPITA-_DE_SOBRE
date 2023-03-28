@@ -135,3 +135,8 @@ STATUS send_signal_procs(int sig, int n_hijos, long pid)
 
   return OK;
 }
+
+void nanorandsleep(){
+  struct timespec time ={0,rand()%BIG_PRIME};
+  nanosleep(&time, NULL);
+}
