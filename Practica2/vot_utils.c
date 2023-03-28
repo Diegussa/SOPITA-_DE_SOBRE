@@ -115,7 +115,7 @@ STATUS send_signal_procs(int sig, int n_hijos, long pid)
     fprintf(stderr, "ERROR opening the file %s to write\n", NOMBREFICHERO);
     return ERROR;
   }
-  if(fread(PIDs, sizeof(pid_t), n_hijos, fHijos) == -1)
+  if(fread(PIDs, sizeof(pid_t), n_hijos, fHijos) == ERROR)
     return ERROR;
 
   /*Sending the signal to every son*/
