@@ -15,7 +15,6 @@
 
 #define NOMBREVOTAR "votos.txt"
 #define NSIGNALS 4
-#define DEBUG
 
 volatile sig_atomic_t got_sigUSR1 = 0;
 volatile sig_atomic_t got_sigUSR2 = 0;
@@ -215,6 +214,7 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
 
       if (send_signal_procs(SIGUSR1, n_procs, NO_PID) == ERROR)
       {
+        printf("asdf1\n");
         _error_in_voters();
       }
     }
@@ -234,10 +234,10 @@ void voters(int n_procs, sem_t *semV, sem_t *semC, sem_t *semCTRL)
     if (got_sigTERM)
     {
       up(semCTRL);
-      kill(getppid(), SIGUSR1);
 #ifdef DEBUG
       printf("Hijo con PID=%ld sale por señal\n", (long)getpid());
 #endif
+      kill(getppid(), SIGUSR1);
       sem_close(semV);
       sem_close(semC);
       sem_close(semCTRL);
@@ -272,11 +272,13 @@ void candidato(int n_procs, sem_t *semCTRL)
   /*Candidate votes*/
   if (votingCarefully(NOMBREVOTAR) == ERROR)
   {
+    printf("rtcsavx\n");
     _error_in_voters();
     return;
   }
   if (send_signal_procs(SIGUSR2, n_procs, getpid()) == ERROR)
   {
+    printf("asdf2\n");
     _error_in_voters();
     return;
   }
@@ -293,7 +295,7 @@ void candidato(int n_procs, sem_t *semCTRL)
 
   /*Read the votes every 0.1 seconds until everybody votes*/
   while (reading)
-  {
+  {sleep(8);
 #ifdef TEST
     usleep(rand() % getpid());
 #endif

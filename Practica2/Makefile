@@ -27,7 +27,7 @@ vot_utils.o: vot_utils.c vot_utils.h
 
 #----------------------------------------------------------------------------------------------------------------------------
 run:
-	./vote 3 100
+	./vote 5 100
 
 runv:
 	valgrind --leak-check=full --show-leak-kinds=all ./vote 2 10

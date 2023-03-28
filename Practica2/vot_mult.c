@@ -136,8 +136,7 @@ int main(int argc, char *argv[])
     printf("Finishing by signal\n");
   else
   {
-    finishProg(n_procs, semV, semC, semCTRL, ERROR);
-    (void)send_signal_procs(SIGKILL, n_procs, NO_PID);
+    finishProg(n_procs, semV, semC, semCTRL, OK);
     printf("Finishing by an error\n");
     exit(EXIT_FAILURE);
   }
