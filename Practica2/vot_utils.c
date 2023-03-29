@@ -99,16 +99,14 @@ STATUS send_signal_procs(int sig, int n_hijos, long pid)
   FILE *fHijos;
 
   /*Memory allocation*/
-  PIDs = (pid_t *)malloc(n_hijos * sizeof(pid_t));
-  if (!PIDs)
+  if (!(PIDs = (pid_t *)malloc(n_hijos * sizeof(pid_t))))
   {
     printf("Error allocating memory for PIDs\n");
     return ERROR;
   }
 
   /*Opening and reading the file*/
-  fHijos = fopen(NOMBREFICHERO, "rb");
-  if (!fHijos)
+  if (!(fHijos = fopen(NOMBREFICHERO, "rb")))
   {
     free(PIDs);
     fprintf(stderr, "ERROR opening the file %s to write\n", NOMBREFICHERO);
@@ -121,12 +119,9 @@ STATUS send_signal_procs(int sig, int n_hijos, long pid)
   for (i = 0; i < n_hijos; i++)
   {
     if (PIDs[i] != pid){
-        if(kill(PIDs[i], sig) == ERROR){
-            return ERROR;
-        }
-          
-    }
-        
+        if(kill(PIDs[i], sig) == ERROR)
+          return ERROR;
+    }    
   }
 
   fclose(fHijos);
@@ -135,12 +130,13 @@ STATUS send_signal_procs(int sig, int n_hijos, long pid)
   return OK;
 }
 
+/*Waits a random number of nanoseconds*/
 void nanorandsleep(){
   struct timespec time ={0,rand()%BIG_PRIME};
   nanosleep(&time, NULL);
 }
 
-
+/*Waits a given number of nanoseconds*/
 void ournanosleep(int t){
 struct timespec time ={0,t};
   nanosleep(&time, NULL);

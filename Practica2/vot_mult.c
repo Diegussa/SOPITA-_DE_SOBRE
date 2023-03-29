@@ -81,6 +81,10 @@ int main(int argc, char *argv[])
 
   n_procs = atoi(argv[1]);
   n_sec = atoi(argv[2]);
+  if (n_procs < 2 || n_procs > MAX_PROCS|| n_sec < 1){
+    fprintf(stderr, "%d < <N_PROCS> < %d and %d < <N_SECS>\n",2,MAX_PROCS,1);
+    exit(EXIT_FAILURE);
+  }
 
   /*Blocking temporarly SIG_INT, SIG_ALARM ad SIG_USR1 to set their handlers*/
   if(set_handlers(signals, NSIGPRINC, &actPRINC, &oldmask, handler_main) == ERROR){
