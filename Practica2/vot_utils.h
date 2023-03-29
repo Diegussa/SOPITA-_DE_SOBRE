@@ -19,7 +19,7 @@
 
 #define NOMBREFICHERO "hijosPID.txt"
 #define NO_PID -1
-#define BIG_PRIME 952251017
+#define BIG_PRIME 573163
 
 typedef enum
 {
