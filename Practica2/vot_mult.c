@@ -9,7 +9,7 @@
 
 #include "vot_func.h"
 
-#define MAX_PROCS 1000
+#define MAX_PROCS 5000
 #define NSIGPRINC 3
 #define nameSemV "/semV"
 #define nameSemC "/semC"
@@ -134,10 +134,10 @@ int main(int argc, char *argv[])
   if (!Error_in_voters)
     finishProg(n_procs, semV, semC, semCTRL, OK);
 
-  if (got_sigALRM)
-    printf("Finishing by alarm\n");
-  else if (got_sigINT)
+  if (got_sigINT)
     printf("Finishing by signal\n");
+  else if (got_sigALRM)
+    printf("Finishing by alarm\n");
   else
   {
     finishProg(n_procs, semV, semC, semCTRL, OK);
