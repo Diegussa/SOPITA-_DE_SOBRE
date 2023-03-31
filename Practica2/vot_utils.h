@@ -14,9 +14,6 @@
 #include <pthread.h>
 #include <signal.h>
 
-//#define DEBUG
-#define TEST
-
 #define NOMBREFICHERO "hijosPID.txt"
 #define NO_PID -1
 #define BIG_PRIME 573163
