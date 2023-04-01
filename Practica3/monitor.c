@@ -1,0 +1,65 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "funciones.h"
+
+#define SHM_NAME "/shm_name"
+#define MAX_LAG 1000000    /*Un segundo*/
+int main(int argc, int* argv[]){
+
+    int lag, fd;
+    /*Control error*/
+    if (argc != 2)
+    {
+        fprintf(stderr, "Usage: %s <LAG>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    /*Retraso en milisegundos entre cada monitorización*/
+    lag = atoi(argv[1]);
+
+    if(lag < 1 || lag > MAX_LAG){
+        fprintf(stderr, "%d < <LAG> < %d\n",1,MAX_LAG);
+        exit(EXIT_FAILURE);
+    }
+   /*Aqui se debe hacer una petición a memoria compartida para que los procesos divergan*/
+    fd = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR |S_IWUSR);
+    if(fd == ERROR){
+
+        if(errno ==  EEXIST){
+
+            fd = shm_open(SHM_NAME, O_RDWR, 0); 
+            if(fd == ERROR){
+                perror (" Error opening the shared memory segment ") ;
+                /*Controlar al otro proceso*/
+                exit(EXIT_FAILURE);
+            }else{
+                /*EL programa diverge un se convierte en monitor y otro en comprobador*/
+                #ifdef DEBUG
+                    printf("Monitor %d\n", getpid());
+                #endif
+                monitor(fd,lag);
+            }
+        }else{
+            perror (" Error creating the shared memory segment ") ;
+            /*Controlar al otro proceso*/
+            exit(EXIT_FAILURE);
+        }
+    }else{
+        /*EL programa diverge un se convierte en monitor y otro en comprobador*/
+        #ifdef DEBUG
+            printf("Comprobador %d\n", getpid());
+        #endif
+        comprobador(fd,lag);
+    }
+}
+
+
+/*Idea general del progrma:*/
+
+/*Se busca que al ejecutar desde terminales diferentes, minero y monitro (2 veces) con retardos diferentes, el progrma funcione correctamente*/
+/*Mirar imagenes última hoja de la practica*/
+

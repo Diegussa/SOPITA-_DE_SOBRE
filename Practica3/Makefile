@@ -7,36 +7,59 @@ IFLAGS=-I. ##La opción -I se usa para indicar donde se encuentran los ficheros 
 
 LIBS= -lm -lpthread -lrt ### -lm enlaza la biblioteca matematica, -pthread enlaza la biblioteca de hilos
 
+MON_OBJS = monitor.o funciones.o utils.o
+MIN_OBJS = minero.o pow.o
+
 ## EXECUTIVES CREATION ##
 #----------------------------------------------------------------------------------------------------------------------------
 
-all: vote 
+all: monitor minero
 
-vote: vot_mult.o vot_func.o vot_utils.o
+monitor: monitor.o funciones.o utils.o
 	$(CC) -o $@ $^ $(LIBS)
 
 	
-vot_mult.o: vot_mult.c vot_func.h vot_utils.h
+monitor.o: monitor.c funciones.h utils.h
 	$(CC) -c $< 
 
-vot_func.o: vot_func.c vot_func.h vot_utils.h
+funciones.o: funciones.c funciones.h utils.h
 	$(CC) -c $< 
 
-vot_utils.o: vot_utils.c vot_utils.h
+utils.o: utils.c utils.h
 	$(CC) -c $< 
 
+
+minero: minero.o pow.o
+	$(CC) -o $@ $^ $(LIBS)
+
+minero.o: minero.c pow.h
+	$(CC) -c $< 
+
+pow.o: pow.c pow.h
+	$(CC) -c $< 
 #----------------------------------------------------------------------------------------------------------------------------
-run:
-	./vote 10 5
+run_mon:
+	./monitor 10 5
 
-runv:
-	valgrind --leak-check=full --show-leak-kinds=all ./vote 2 10
+run_monv:
+	valgrind --leak-check=full --show-leak-kinds=all ./monitor 2 10
+
+run_min:
+	./monitor 10 5
+
+run_minv:
+	valgrind --leak-check=full --show-leak-kinds=all ./monitor 2 10
 #----------------------------------------------------------------------------------------------------------------------------
 clean:
-	rm -v vote *.o
+	rm -v monitor minero *.o
 
+clean_mon:
+	rm -v monitor  $(MON_OBJS)
+
+clean_min:
+	rm -v  minero $(MIN_OBJS)
 cs:
 	ls /dev/shm
 
 rs:
-	 rm /dev/shm/sem*
+	 rm /dev/shm/shm*
