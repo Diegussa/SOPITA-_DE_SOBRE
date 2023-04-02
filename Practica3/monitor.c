@@ -4,12 +4,14 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
+#include <errno.h>
 #include "funciones.h"
 
 #define SHM_NAME "/shm_name"
 #define MAX_LAG 1000000    /*Un segundo*/
-int main(int argc, int* argv[]){
+
+
+int main(int argc, char* argv[]){
 
     int lag, fd;
     /*Control error*/
@@ -41,7 +43,10 @@ int main(int argc, int* argv[]){
                 #ifdef DEBUG
                     printf("Monitor %d\n", getpid());
                 #endif
-                monitor(fd,lag);
+                if(  monitor(fd,lag)==ERROR){
+                    perror ("Error in monitor") ;
+                    exit(EXIT_FAILURE);
+                }
             }
         }else{
             perror (" Error creating the shared memory segment ") ;
@@ -53,8 +58,17 @@ int main(int argc, int* argv[]){
         #ifdef DEBUG
             printf("Comprobador %d\n", getpid());
         #endif
-        comprobador(fd,lag);
+        if(comprobador(fd,lag)==ERROR){
+            perror ("Error in comprobador") ;
+            shm_unlink(SHM_NAME);
+            exit(EXIT_FAILURE);
+        }
+        /*CONDICIONES DE CARRERA: No sé como controlar que no borro la ruta a la memoria compartida antes de que el otro (monitor) habrá la memoria con shm_open
+         con asegurar que hace el shm_open antes que tú el unlink es suficiente. */
+        shm_unlink ( SHM_NAME);
     }
+
+     exit(EXIT_SUCCESS);
 }
 
 

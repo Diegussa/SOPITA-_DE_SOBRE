@@ -15,14 +15,14 @@ MIN_OBJS = minero.o pow.o
 
 all: monitor minero
 
-monitor: monitor.o funciones.o utils.o
+monitor: monitor.o funciones.o utils.o pow.o
 	$(CC) -o $@ $^ $(LIBS)
 
 	
-monitor.o: monitor.c funciones.h utils.h
+monitor.o: monitor.c funciones.h utils.h pow.h
 	$(CC) -c $< 
 
-funciones.o: funciones.c funciones.h utils.h
+funciones.o: funciones.c funciones.h utils.h pow.h
 	$(CC) -c $< 
 
 utils.o: utils.c utils.h
@@ -38,8 +38,10 @@ minero.o: minero.c pow.h
 pow.o: pow.c pow.h
 	$(CC) -c $< 
 #----------------------------------------------------------------------------------------------------------------------------
+run_all: ./monitor 1000 ./monitor 500 ./minero 200 100  #Es posible que esto haga que se ejecuten en orden, no simultaneamente
+
 run_mon:
-	./monitor 10 5
+	./monitor 100
 
 run_monv:
 	valgrind --leak-check=full --show-leak-kinds=all ./monitor 2 10

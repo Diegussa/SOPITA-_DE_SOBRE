@@ -9,10 +9,7 @@
 #ifndef FUNCIONES_H
 #define FUNCIONES_H
 
-#include <semaphore.h>
-#include <unistd.h>
-#include <pthread.h>
-#include <signal.h>
+typedef struct _Shm_struct Shm_struct;
 
 #include "utils.h"
 

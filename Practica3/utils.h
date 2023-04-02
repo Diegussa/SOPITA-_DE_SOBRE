@@ -14,8 +14,11 @@
 #include <pthread.h>
 #include <signal.h>
 
+#include "pow.h"
+
 #define NO_PID -1
 #define BIG_PRIME 573163
+//#define DEBUG
 
 typedef enum
 {
