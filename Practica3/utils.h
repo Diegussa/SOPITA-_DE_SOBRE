@@ -18,7 +18,7 @@
 
 #define NO_PID -1
 #define BIG_PRIME 573163
-#define DEBUG
+//#define DEBUG
 
 typedef enum
 {
