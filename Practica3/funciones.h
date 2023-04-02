@@ -20,7 +20,7 @@ typedef struct _Shm_struct Shm_struct;
  * @pre lag Espera especificada por el usuario
  * @return ERROR si algo ha salido mal y OK en caso contrario
  */
-STATUS comprobador(int fd, int lag);
+STATUS comprobador(int fd, int lag, sem_t *sem1);
 
 /**
  * @brief Funcion principal de la rutina monitor
@@ -29,7 +29,7 @@ STATUS comprobador(int fd, int lag);
  * @pre lag Espera especificada por el usuario
  * @return ERROR si algo ha salido mal y OK en caso contrario
  */
-STATUS monitor(int fd,int lag);
+STATUS monitor(int fd,int lag, sem_t *sem1);
 
 
 #endif

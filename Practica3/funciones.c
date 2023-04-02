@@ -31,7 +31,7 @@ struct _Shm_struct
     long num[N_SIZE][QUEUE_SIZE];
 };
 
-STATUS comprobador(int fd_shm, int lag){
+STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl){
     FILE *f;
     long new_objetivo,new_solucion, obj,sol;
     int fin=0,res, index = 0; /*Index apunta a la primera direccción vacía*/
@@ -60,7 +60,6 @@ STATUS comprobador(int fd_shm, int lag){
     close(fd_shm);
     /*Inicialización de los semaforos*/
 
-    /*CONDICIONES DE CARRERA: No sé como controlar que el monitor no haga down de un semáforo que aún no ha sido inicializado*/
     if( ERROR== sem_init(&(mapped->sem_mutex),2,1)){
         perror("Sem_init mutex");
         /*Comunicar de alguna forma a los otro proceso que fin*/
@@ -90,7 +89,11 @@ STATUS comprobador(int fd_shm, int lag){
     }
     #ifdef DEBUG
         printf("Pasa inicializa sem _lleno %d\n", getpid());
+        sleep(2);
     #endif
+    /*Cerramos el semáforo que ya no utilizaremos*/
+    up(semCtrl);
+    sem_close(semCtrl);
     /*TEMPORAL*/ f = fopen(FILE_NAME,"r");
     /*TEMPORAL*/fscanf(f,"%ld", &sol);
     /*TEMPORAL*/
@@ -144,18 +147,17 @@ STATUS comprobador(int fd_shm, int lag){
     #endif
     /*Liberación de recursos y fin*/
     /*TEMPORAL*/fclose(f);
-    /*CONDICIONES DE CARRERA: No sé como controlar que el monitor no haga down o up de un semáforo que ya ha sido destruido*/
     #ifdef DEBUG
         sleep(1);
     #endif
-    sem_destroy(&mapped->sem_vacio);
-    sem_destroy(&mapped->sem_mutex);
-    sem_destroy(&mapped->sem_lleno);
-    munmap(mapped, sizeof(Shm_struct));
+    if(munmap(mapped, sizeof(Shm_struct))==ERROR){
+        perror("munmap comprobador\n");
+        return ERROR;
+    }
     return OK;
 }
 
-STATUS monitor(int fd_shm, int lag){
+STATUS monitor(int fd_shm, int lag, sem_t *semCtrl){
     long obj,sol;
     int fin=0,res, index = 0; /*Index apunta a la primera direccción llena*/
     Shm_struct *mapped;
@@ -169,6 +171,8 @@ STATUS monitor(int fd_shm, int lag){
     }
     /*Cerramos el descriptor ya que tenemos un puntero a la "posición" de mamoria compartida*/
     close(fd_shm);
+    down(semCtrl);
+    sem_close(semCtrl);
     while(1){
         /*Extaerá un bloque realizando de consumidor en el esquema productor-consumidor*/
         down(&mapped->sem_lleno);
@@ -200,6 +204,10 @@ STATUS monitor(int fd_shm, int lag){
         /*Repetirá el ciclo de extracción y muestra hasta recibir un bloque especial que indique la finalización del sistema*/
     }
     /*Liberación de recursos y fin*/
+    /*Cerramos los recursos abiertos ya que han sido abiertos por el comprobador y nosotros somos los últimos en usarlos*/
+    sem_destroy(&mapped->sem_vacio);
+    sem_destroy(&mapped->sem_mutex);
+    sem_destroy(&mapped->sem_lleno);
     munmap(mapped, sizeof(Shm_struct));
     return OK;
 }

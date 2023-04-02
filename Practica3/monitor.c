@@ -8,11 +8,12 @@
 #include "funciones.h"
 
 #define SHM_NAME "/shm_name"
+#define NAME_SEM_CTRL "/semCTRL"
 #define MAX_LAG 1000000    /*Un segundo*/
 
 
 int main(int argc, char* argv[]){
-
+    sem_t *semCtrl;
     int lag, fd;
     /*Control error*/
     if (argc != 2)
@@ -27,6 +28,12 @@ int main(int argc, char* argv[]){
         fprintf(stderr, "%d < <LAG> < %d\n",1,MAX_LAG);
         exit(EXIT_FAILURE);
     }
+    if ((semCtrl = sem_open(NAME_SEM_CTRL, O_CREAT , S_IRUSR | S_IWUSR, 0)) == SEM_FAILED)
+    {
+        perror("sem_open SemCtrl");
+        exit(EXIT_FAILURE);
+    }
+
    /*Aqui se debe hacer una petición a memoria compartida para que los procesos divergan*/
     fd = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR |S_IWUSR);
     if(fd == ERROR){
@@ -43,10 +50,13 @@ int main(int argc, char* argv[]){
                 #ifdef DEBUG
                     printf("Monitor %d\n", getpid());
                 #endif
-                if(  monitor(fd,lag)==ERROR){
+                if( monitor(fd,lag,semCtrl)==ERROR){
                     perror ("Error in monitor") ;
                     exit(EXIT_FAILURE);
                 }
+                /*Se desvinculan ambos recursos al ser nosotros los últimos en usarlos*/
+                shm_unlink (SHM_NAME);
+                sem_unlink(NAME_SEM_CTRL);
             }
         }else{
             perror (" Error creating the shared memory segment ") ;
@@ -58,14 +68,13 @@ int main(int argc, char* argv[]){
         #ifdef DEBUG
             printf("Comprobador %d\n", getpid());
         #endif
-        if(comprobador(fd,lag)==ERROR){
+        if(comprobador(fd,lag,semCtrl)==ERROR){
             perror ("Error in comprobador") ;
             shm_unlink(SHM_NAME);
             exit(EXIT_FAILURE);
         }
-        /*CONDICIONES DE CARRERA: No sé como controlar que no borro la ruta a la memoria compartida antes de que el otro (monitor) habrá la memoria con shm_open
-         con asegurar que hace el shm_open antes que tú el unlink es suficiente. */
-        shm_unlink ( SHM_NAME);
+        
+        
     }
 
      exit(EXIT_SUCCESS);

@@ -65,3 +65,4 @@ cs:
 
 rs:
 	 rm /dev/shm/shm*
+	 rm /dev/shm/sem*
