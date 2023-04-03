@@ -18,6 +18,7 @@
 
 #define NO_PID -1
 #define BIG_PRIME 573163
+#define MIL 1000
 //#define DEBUG
 
 typedef enum

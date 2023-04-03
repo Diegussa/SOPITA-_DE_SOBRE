@@ -1,7 +1,9 @@
 #include <mqueue.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define MAX_MESSAGE 1024
 #define MQ_NAME "/mq_example"
@@ -16,7 +18,7 @@ int main(void) {
 
   attributes.mq_maxmsg = 10;
   attributes.mq_msgsize = MAX_MESSAGE;
-
+  printf("holas%d\n",(int)mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes));
   if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)-1) {
     perror("mq_open");
     exit(EXIT_FAILURE);

@@ -19,6 +19,7 @@ int main(void) {
 
   if (queue == (mqd_t)-1) {
     fprintf(stderr, "Error opening the queue\n");
+    perror("mq_open");
     return EXIT_FAILURE;
   }
 
