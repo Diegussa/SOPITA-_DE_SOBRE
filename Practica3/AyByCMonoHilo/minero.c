@@ -6,8 +6,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "utils.h"
+#include <mqueue.h>
 
 #include "pow.h"
+#include "utils.h"
 
 #define MAX_ROUNDS 1000
 #define MAX_LAG 1000000    /*Un segundo*/
@@ -15,17 +17,12 @@
 #define SIZE 7 /*Debe ser menor o igual a 10*/
 #define MQ_NAME "/mqueue"
 
-typedef struct
-{
-        int obj,sol,fin;
-}Message;
-
 int minar(int obj);
 
 int main(int argc, char *argv[])
 {
     int n_rounds, lag, i, index; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
-    struct mq_attr attributes ;
+    struct mq_attr attributes;
     Message msg[SIZE+1]; /*Número de mensajes que deben estar listos como mucho los 7 en el mailbox y el siguiente a enviar*/
     mqd_t mq;
     /*Control error*/
@@ -52,6 +49,8 @@ int main(int argc, char *argv[])
          perror (" mq_open ") ;
          exit ( EXIT_FAILURE ) ;
     }
+    printf("[%d] Generating blocks...\n",getpid());
+
     /*Establecerá un objetivo inical fijo para la POW <INIC> (macro)*/
     msg[0].obj=INIC;
 
@@ -62,7 +61,7 @@ int main(int argc, char *argv[])
         msg[index].fin = (int)(i+1)/n_rounds;
 
         /*No se si con la función ya creada o con otra nueva (Parece que con una versión de la de la practica 1)*/
-        msg[index].sol=minar(obj);
+        msg[index].sol=minar(msg[index].obj);
 
          /*Enviará por la cola de mensajes (al Comprobador ) un mensaje con al menos el objetivo y la solución hallada*/
         if(mq_send ( mq , (char*)(msg+index), sizeof(msg[index]), 0) == ERROR){
@@ -77,6 +76,8 @@ int main(int argc, char *argv[])
         index = (i+1)%(SIZE+1);
         msg[index].obj =msg[i%(SIZE+1)].sol;
     }
+    printf("[%d] Finishing...\n",getpid());
+
      /*Liberará recursos y terminará*/
     mq_close(mq);
     
@@ -87,7 +88,7 @@ int minar(int obj){
     int i;
     int x =-1;
 
-    for (i = e->ep; (i <POW_LIMIT) && (x <= 0); i++)
+    for (i = 0; (i <POW_LIMIT) && (x <= 0); i++)
     {
         if ((long)pow_hash(i) == obj)
         {

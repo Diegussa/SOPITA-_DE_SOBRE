@@ -6,18 +6,35 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "utils.h"
+#include <mqueue.h>
 
 #include "pow.h"
+#include "utils.h"
 
 #define MAX_ROUNDS 1000
 #define MAX_LAG 1000000    /*Un segundo*/
 #define INIC 0
+#define SIZE 7 /*Debe ser menor o igual a 10*/
+#define MQ_NAME "/mqueue"
+#define N_HILOS 16
+#define MAX POW_LIMIT-1
+
+int encontrado;
+
+typedef struct 
+{
+    long ep, eu, res;
+}Entrada_Hash;
+
+int minar(int obj);
+void *func_minero(void *arg);
 
 int main(int argc, char *argv[])
 {
-
-    int n_rounds, lag;
-
+    int n_rounds, lag, i, index; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
+    struct mq_attr attributes;
+    Message msg[SIZE+1]; /*Número de mensajes que deben estar listos como mucho los 7 en el mailbox y el siguiente a enviar*/
+    mqd_t mq;
     /*Control error*/
     if (argc != 3)
     {
@@ -35,20 +52,112 @@ int main(int argc, char *argv[])
     }
 
     /*Creará una cola de mensajes de capacidad 7*/
+    attributes.mq_maxmsg = SIZE;
+    attributes.mq_msgsize = sizeof(Message) ;
+
+    if (( mq = mq_open ( MQ_NAME , O_CREAT | O_RDWR , S_IRUSR | S_IWUSR , &attributes ) ) == ( mqd_t )ERROR) {
+         perror (" mq_open ") ;
+         exit ( EXIT_FAILURE ) ;
+    }
+    printf("[%d] Generating blocks...\n",getpid());
 
     /*Establecerá un objetivo inical fijo para la POW <INIC> (macro)*/
+    msg[0].obj=INIC;
 
     /*Para cada ronda resolverá la POW */
-    /*No se si con la función ya creada o con otra nueva (Parece que con una versión de la de la practica 1)*/
+    for(i=0,index=0;i<n_rounds;i++){
+        
+        /*Una vez terminada las rondas enviará un bloque especial indicandole la finalización*/
+        msg[index].fin = (int)(i+1)/n_rounds;
 
-    /*Enviará por la cola de mensajes (al Comprobador ) un mensaje con al menos el objetivo y la solución hallada*/
+        /*No se si con la función ya creada o con otra nueva (Parece que con una versión de la de la practica 1)*/
+        msg[index].sol=minar(msg[index].obj);
 
-    /*Realizará una espera de <LAG> milisegundos*/
+         /*Enviará por la cola de mensajes (al Comprobador ) un mensaje con al menos el objetivo y la solución hallada*/
+        if(mq_send ( mq , (char*)(msg+index), sizeof(msg[index]), 0) == ERROR){
+            perror (" mq_send ") ;
+            mq_close ( mq ) ;
+            exit ( EXIT_FAILURE ) ;
+        }
 
-    /*Establezerá como siguiente objetivo la solución anterior*/
+        /*Realizará una espera de <LAG> milisegundos*/
+        ournanosleep(lag*MIL);
+        /*Establezerá como siguiente objetivo la solución anterior*/
+        index = (i+1)%(SIZE+1);
+        msg[index].obj =msg[i%(SIZE+1)].sol;
+    }
+    printf("[%d] Finishing...\n",getpid());
 
-    /*Una vez terminada las rondas enviará un bloque especial indicandole la finalización */
+     /*Liberará recursos y terminará*/
+    mq_close(mq);
+    
+    exit(EXIT_SUCCESS);
+}
 
-    /*Liberará recursos y terminará*/
+int minar(int obj){
+    int i, incr, rc[N_HILOS], Status;
+    Entrada_Hash t[N_HILOS];
+    long solucion;
+    pthread_t threads[N_HILOS];
+    void *sol[N_HILOS];
 
+    incr = ((int)MAX) / N_HILOS;
+    encontrado = 0;
+    
+    /*Creación de hilos*/
+    for (i = 0; i < N_HILOS; i++)
+    {
+        t[i].ep = incr * i;
+        t[i].eu = incr * (i + 1);
+        if (i == N_HILOS - 1)
+        { /*Para el caso en el que MAX no sea divisible por NHilos*/
+            t[i].eu = MAX;
+        }
+        t[i].res = obj;
+        rc[i] = pthread_create(&threads[i], NULL, func_minero, (void *)(t + i));
+
+        if (rc[i])
+        {
+                
+        }
+    }    
+
+    /*Joins de los hilos*/
+    for (i = 0; i < N_HILOS; i++)
+    {
+        rc[i] = pthread_join(threads[i], sol + i);
+        if (rc[i])
+        {
+                
+        }
+    }
+
+    for (i = 0; i < N_HILOS; i++)
+    {
+        if ((long)sol[i] != -1)
+        {
+            solucion = (long)sol[i];
+            break;
+        }
+    }
+        
+    return solucion;
+}
+        
+void *func_minero(void *arg)
+{
+    int i;
+    long x = -1;
+    Entrada_Hash *e = (Entrada_Hash *)arg;
+
+    for (i = e->ep; (i < e->eu) && (x <= 0) && (encontrado == 0); i++)
+    {
+        if ((long)pow_hash(i) == e->res)
+        {
+            x = i;
+            encontrado = 1;
+        }
+    }
+
+    pthread_exit((void *)x);
 }

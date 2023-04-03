@@ -12,7 +12,7 @@ int main(void) {
 
   queue = mq_open(
       MQ_NAME,
-      O_CREAT | O_RDONLY, /* This process is going to receive messages. */
+      O_CREAT | O_RDONLY | O_NONBLOCK, /* This process is going to receive messages. */
       S_IRUSR | S_IWUSR,  /* The user can read and write. */
       &attributes);
 

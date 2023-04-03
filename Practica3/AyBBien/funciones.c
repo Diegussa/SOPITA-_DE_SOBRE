@@ -13,7 +13,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>  
-#include <mqueue.h>
 
 #include "funciones.h"
 
@@ -24,29 +23,19 @@
 #define SOL 1
 #define RES 2
 #define FIN 3
-#define SIZE 7
-#define MQ_NAME "/mqueue"
+
 
 struct _Shm_struct
 {
     sem_t sem_vacio, sem_mutex, sem_lleno;
     long num[N_SIZE][QUEUE_SIZE];
 };
-/*Esto debería alojarse en utils ya que lo comparten minero y comprobador*/
-typedef struct
-{
-        int obj,sol,fin;
-}Message;
 
 STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl){
     FILE *f;
     long new_objetivo,new_solucion, obj,sol;
     int fin=0,res, index = 0; /*Index apunta a la primera direccción vacía*/
     Shm_struct *mapped;
-    struct mq_attr attributes ;
-    mqd_t mq;
-    Message msg:
-
     
     /*Mapeará el segmento de memoria*/
     if(ftruncate(fd_shm,sizeof(Shm_struct))==ERROR){
@@ -105,33 +94,24 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl){
     /*Cerramos el semáforo que ya no utilizaremos*/
     up(semCtrl);
     sem_close(semCtrl);
-    /*CAMBIOS: Preparando la cola de mensajes*/
-    attributes . mq_maxmsg = SIZE;
-    attributes . mq_msgsize = sizeof(Message) ;
-
-    if (( mq = mq_open ( MQ_NAME , O_CREAT | O_RDWR , S_IRUSR | S_IWUSR , &attributes ) ) == ( mqd_t ) ERROR) {
-        perror (" mq_open ") ;
-        exit ( EXIT_FAILURE ) ;
-    }
-    
+    /*TEMPORAL*/ f = fopen(FILE_NAME,"r");
+    /*TEMPORAL*/fscanf(f,"%ld", &sol);
+    /*TEMPORAL*/
     while(1){
-        /*CAMBIOS:Recibirá un bloque a través de mensajes por parte del minero*/
-        if ( mq_receive (mq,(char*)&msg , sizeof(Message),0) == ERROR) {
-            perror("mq_receive");
-            mq_close(mq);
-            /*Habría que comunicar al resto de procesos que ha habido un error*/
-            exit(EXIT_FAILURE);
-        }
-        obj = msg.obj;
-        sol =msg.sol;
-        fin =msg.fin;
-        if(fin){
+        /*Recibirá un bloque a través de mensajes por parte del minero*/
+
+        /*TEMPORAL :Momentaneamente para probar la implementación de monitor-comprobador lo leeremos del fichero proporcionado*/
+        obj = sol;
+        fscanf(f,"%ld", &new_solucion);
+        sol =new_solucion;
+        if(sol== obj){
             /*Forma de decir que se ha acabado el fichero del que leíamos*/
             #ifdef DEBUG
             printf("FIN %ld -> %ld %ld fin: %d\n",obj,sol, pow_hash(sol),fin);
             #endif
+            fin = 1;
         }
-        /*CAMBIOS:Aquí acaba los cambios*/
+        /*TEMPORAL:Aquí acaba lo  temporal*/
         
         /*Comproborá con la función hash si es correcta y añadirá una bandera que indique si es correcta o no*/
         if( obj == pow_hash(sol)){
@@ -154,6 +134,7 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl){
         up(&mapped->sem_mutex);
         up(&mapped->sem_lleno);
 
+
         /*Realizará una espera de <lag> milisegundos */
         ournanosleep(lag*MIL);
          /*Cuando se reciba dicho bloque lo introducirá en memoria compartida para avisar a Monitor de la fincalización*/
@@ -165,7 +146,7 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl){
             printf("Comprobador sale %d\n", getpid());
     #endif
     /*Liberación de recursos y fin*/
-    /*CAMBIOS:*/ mq_unlink ( MQ_NAME );
+    /*TEMPORAL*/fclose(f);
     #ifdef DEBUG
         sleep(1);
     #endif
