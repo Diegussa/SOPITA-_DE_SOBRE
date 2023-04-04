@@ -68,14 +68,9 @@ int main(int argc, char *argv[])
     printf("[%d] Generating blocks...\n", getpid());
 
     /*Bucle de minería y mandar las soluciones*/
-    for (i = 0; i < n_rounds; i++)
+    for (i = 0, msg.obj = INIC; i < n_rounds; i++, msg.obj = msg.sol)
     {
-        /*Construir el mensaje*/
-        if (i)
-            msg.obj = msg.sol;
-        else
-            msg.obj = INIC;
-        msg.fin = (int)((i + 1) / n_rounds); /*1 en la última, 0 en el resto*/
+        /*Construcción del mensaje*/
         if ((msg.sol = minar(msg.obj)) == ERROR)
             error("Error en minar");
 
@@ -85,12 +80,19 @@ int main(int argc, char *argv[])
             mq_close(mq);
             error(" mq_send ");
         }
-        
         ournanosleep(lag * MILLON); /*Espera de <LAG> milisegundos*/
     }
-    printf("[%d] Finishing...\n", getpid());
+    
+    /*Enviar mensaje indicando que se ha acabado*/
+    msg.obj = -1;
+    if (mq_send(mq, (char *)(&msg), sizeof(Message), 0) == ERROR)
+    {
+        mq_close(mq);
+        error(" mq_send ");
+    }
 
     /*Liberación de recursos y finalización*/
+    printf("[%d] Finishing...\n", getpid());
     mq_close(mq);
     exit(EXIT_SUCCESS);
 }
@@ -131,11 +133,11 @@ int minar(int obj)
         {
             for (i++; i < N_HILOS; i++)
                 (void)pthread_join(threads[i], sol + i);
-                
+
             return ERROR;
         }
         if ((long)sol[i] != -1)
-            solucion=(long)sol[i];
+            solucion = (long)sol[i];
     }
 
     return (int)solucion;

@@ -6,7 +6,7 @@
  * @date 2023-04-1
  *
  */
-
+/*Quitar Mutex*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>

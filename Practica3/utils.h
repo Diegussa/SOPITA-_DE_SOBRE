@@ -24,7 +24,7 @@
 
 typedef struct
 {
-  int obj, sol, fin;
+  int obj, sol;
 } Message;
 
 typedef enum

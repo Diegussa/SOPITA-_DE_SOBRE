@@ -29,7 +29,6 @@ typedef enum
     OBJ,
     SOL,
     RES,
-    FIN
 } NUMS; /*!< Enumeration of the different num values */
 
 struct _Shm_struct
@@ -43,7 +42,7 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 {
     FILE *f;
     long new_objetivo, new_solucion, obj, sol;
-    int fin = 0, res, index = 0; /*Index apunta a la primera direccción vacía*/
+    int res, index = 0; /*Index apunta a la primera direccción vacía*/
     Shm_struct *mapped;
     struct mq_attr attributes;
     mqd_t mq;
@@ -98,7 +97,7 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
         error("Sem_init lleno");
     }
 #ifdef DEBUG
-    printf("Pasa inicializa sem _lleno %d\n", getpid());
+    printf("Pasa inicializa sem_lleno %d\n", getpid());
     sleep(2);
 #endif
     up(semCtrl); /*Indica a comprobador que los semáforos ya están inicializados*/
@@ -119,18 +118,10 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
         }
         obj = msg.obj;
         sol = msg.sol;
-        fin = msg.fin;
-
-        if (fin)
-        { /*Forma de decir que se ha acabado el fichero del que leíamos*/
-#ifdef DEBUG
-            printf("FIN %ld -> %ld %ld fin: %d\n", obj, sol, pow_hash(sol), fin);
-#endif
-        }
 
         res = (obj == pow_hash(sol)); /*Comprobación de la solución*/
 #ifdef DEBUG
-        printf("Comprueba %ld -> %ld %ld fin: %d\n", obj, sol, pow_hash(sol), fin);
+        printf("Comprueba %ld -> %ld: %d\n", obj, sol, pow_hash(sol));
 #endif
         /*Se la trasladará al monitor a través de la memoria compartida*/
         down(&mapped->sem_vacio);
@@ -139,7 +130,6 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
         mapped->num[OBJ][index] = obj;
         mapped->num[SOL][index] = sol;
         mapped->num[RES][index] = res;
-        mapped->num[FIN][index] = fin;
         index = (index + 1) % QUEUE_SIZE;
 
         up(&mapped->sem_mutex);
@@ -147,10 +137,16 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 
         /*Realizará una espera de <lag> milisegundos */
         ournanosleep(lag * MILLON);
-        /*Cuando se reciba dicho bloque lo introducirá en memoria compartida para avisar a Monitor de la fincalización*/
-        if (fin)
+
+        if (obj == -1)
+        {
+#ifdef DEBUG
+            printf("FIN %ld -> %ld fin: %d\n", obj, sol, pow_hash(sol));
+#endif
+
+printf("comprobador fin recibido\n");
             break;
-        /*Repetirá el proceso hasta que reciba (de minero un bloque especial de finalización)*/
+        }
     }
 
     printf("[%d] Finishing...\n", getpid());
@@ -169,7 +165,7 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
 {
     long obj, sol;
-    int fin = 0, res, index = 0; /*Index apunta a la primera direccción llena*/
+    int res, index = 0; /*Index apunta a la primera direccción llena*/
     Shm_struct *mapped;
 
     printf("[%d] Printing blocks...\n", getpid());
@@ -194,17 +190,17 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
         obj = mapped->num[OBJ][index];
         sol = mapped->num[SOL][index];
         res = mapped->num[RES][index];
-        fin = mapped->num[FIN][index];
         index = (index + 1) % QUEUE_SIZE;
 
         up(&mapped->sem_mutex);
         up(&mapped->sem_vacio);
 
-        if (fin)
+        if (obj == -1)
         {
 #ifdef DEBUG
-            printf("MON FIN %ld -> %ld %ld fin: %d\n", obj, sol, pow_hash(sol), fin);
+            printf("MON FIN %ld -> %ldfin: %d\n", obj, sol, pow_hash(sol));
 #endif
+printf("monitor fin recibido\n");
             break;
         }
 
