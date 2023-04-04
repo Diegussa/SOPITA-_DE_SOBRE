@@ -2,7 +2,7 @@
  * @file funciones.h
  * @author Diego Rodríguez y Alejandro García
  * @brief 
- * @version 
+ * @version 3
  * @date 2023-04-1
  *
  */
@@ -17,19 +17,21 @@ typedef struct _Shm_struct Shm_struct;
  * @brief Funcion principal de la rutina comprobador
  * @author Alejandro García and Diego Rodríguez
  * @pre fd Descriptor al segmento de memoria compartida
- * @pre lag Espera especificada por el usuario
+ * @pre lag Espera indicada por el usuario
+ * @pre semCTRL Semáforo que indica cuando se crean el resto de semáforos
  * @return ERROR si algo ha salido mal y OK en caso contrario
  */
-STATUS comprobador(int fd, int lag, sem_t *sem1);
+STATUS comprobador(int fd, int lag, sem_t *semCtrl);
 
 /**
  * @brief Funcion principal de la rutina monitor
  * @author Alejandro García and Diego Rodríguez
  * @pre fd Descriptor al segmento de memoria compartida
- * @pre lag Espera especificada por el usuario
+ * @pre lag Espera indicada por el usuario
+ * @pre semCTRL Semáforo que indica cuando se han creado el resto de semáforos
  * @return ERROR si algo ha salido mal y OK en caso contrario
  */
-STATUS monitor(int fd,int lag, sem_t *sem1);
+STATUS monitor(int fd,int lag, sem_t *semCtrl);
 
 
 #endif

@@ -1,8 +1,8 @@
 /**
- * @file utils.h
+ * @file utils.c
  * @author Diego Rodríguez y Alejandro García
  * @brief 
- * @version 
+ * @version 3
  * @date 2023-04-1
  *
  */
@@ -45,4 +45,11 @@ void nanorandsleep(){
 void ournanosleep(int t){
 struct timespec time ={0,t};
   nanosleep(&time, NULL);
+}
+
+void error(char *str){
+  if(str)
+    perror(str);
+  
+  exit(EXIT_FAILURE);
 }

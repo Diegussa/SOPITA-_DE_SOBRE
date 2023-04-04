@@ -2,7 +2,7 @@
  * @file utils.h
  * @author Diego Rodríguez y Alejandro García
  * @brief 
- * @version 
+ * @version 3
  * @date 2023-04-1
  *
  */
@@ -18,13 +18,15 @@
 
 #define NO_PID -1
 #define BIG_PRIME 573163
-#define MIL 1000
+#define MILLON 1000000
+#define MAX_LAG 1000 /*Un segundo*/
 //#define DEBUG
 
 typedef struct
 {
         int obj,sol,fin;
 }Message;
+
 typedef enum
 {
   ERROR = -1,
@@ -70,5 +72,13 @@ void nanorandsleep();
  * @return Nothing
  */
 void ournanosleep(int t);
+
+/**
+ * @brief Prints error message and finishes with error
+ * @author Alejandro García and Diego Rodríguez
+ *
+ * @return Nothing
+ */
+void error(char *str);
 
 #endif

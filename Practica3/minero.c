@@ -1,3 +1,11 @@
+/**
+ * @file minero.c
+ * @author Diego Rodríguez y Alejandro García
+ * @brief 
+ * @version 3
+ * @date 2023-04-1
+ *
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,19 +20,18 @@
 #include "utils.h"
 
 #define MAX_ROUNDS 1000
-#define MAX_LAG 1000000    /*Un segundo*/
 #define INIC 0
 #define SIZE 7 /*Debe ser menor o igual a 10*/
 #define MQ_NAME "/mqueue"
 #define N_HILOS 16
-#define MAX POW_LIMIT-1
+#define MAX POW_LIMIT - 1
 
 int encontrado;
 
-typedef struct 
+typedef struct
 {
     long ep, eu, res;
-}Entrada_Hash;
+} Entrada_Hash;
 
 int minar(int obj);
 void *func_minero(void *arg);
@@ -33,10 +40,10 @@ int main(int argc, char *argv[])
 {
     int n_rounds, lag, i, index; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
     struct mq_attr attributes;
-    Message msg[SIZE+1]; /*Número de mensajes que deben estar listos como mucho los 7 en el mailbox y el siguiente a enviar*/
+    Message msg[SIZE + 1]; /*Número de mensajes que deben estar listos como mucho los 7 en el mailbox y el siguiente a enviar*/
     mqd_t mq;
-    /*Control error*/
-    if (argc != 3)
+    
+    if (argc != 3)/*Control de errores*/
     {
         fprintf(stderr, "Usage: %s <ROUNDS> <LAG>\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -45,105 +52,100 @@ int main(int argc, char *argv[])
     n_rounds = atoi(argv[1]);
     /*el retraso en milisegundos entre cada ronda*/
     lag = atoi(argv[2]);
-    
-    if (n_rounds < 1 || n_rounds > MAX_ROUNDS|| lag < 1 || lag > MAX_LAG){
-        fprintf(stderr, "%d < <N_PROCS> < %d and %d < <N_SECS> < %d\n",1,MAX_ROUNDS,1,MAX_LAG);
+
+    if (n_rounds < 1 || n_rounds > MAX_ROUNDS || lag < 1 || lag > MAX_LAG)
+    {
+        fprintf(stderr, "%d < <N_PROCS> < %d and %d < <N_SECS> < %d\n", 1, MAX_ROUNDS, 1, MAX_LAG);
         exit(EXIT_FAILURE);
     }
 
-    /*Creará una cola de mensajes de capacidad 7*/
+    /*Creará una cola de mensajes de capacidad SIZE*/
     attributes.mq_maxmsg = SIZE;
-    attributes.mq_msgsize = sizeof(Message) ;
+    attributes.mq_msgsize = sizeof(Message);
 
-    if (( mq = mq_open ( MQ_NAME , O_CREAT | O_RDWR , S_IRUSR | S_IWUSR , &attributes ) ) == ( mqd_t )ERROR) {
-         perror (" mq_open ") ;
-         exit ( EXIT_FAILURE ) ;
-    }
-    printf("[%d] Generating blocks...\n",getpid());
+    if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
+        error(" mq_open ");
+        
+    printf("[%d] Generating blocks...\n", getpid());
 
     /*Establecerá un objetivo inical fijo para la POW <INIC> (macro)*/
-    msg[0].obj=INIC;
+    msg[0].obj = INIC;
 
     /*Para cada ronda resolverá la POW */
-    for(i=0,index=0;i<n_rounds;i++){
-        
+    for (i = 0, index = 0; i < n_rounds; i++)
+    {
         /*Una vez terminada las rondas enviará un bloque especial indicandole la finalización*/
-        msg[index].fin = (int)(i+1)/n_rounds;
+        msg[index].fin = (int)(i + 1) / n_rounds;
 
         /*No se si con la función ya creada o con otra nueva (Parece que con una versión de la de la practica 1)*/
-        msg[index].sol=minar(msg[index].obj);
+        msg[index].sol = minar(msg[index].obj);
 
-         /*Enviará por la cola de mensajes (al Comprobador ) un mensaje con al menos el objetivo y la solución hallada*/
-        if(mq_send ( mq , (char*)(msg+index), sizeof(msg[index]), 0) == ERROR){
-            perror (" mq_send ") ;
-            mq_close ( mq ) ;
-            exit ( EXIT_FAILURE ) ;
+        /*Enviará por la cola de mensajes (al Comprobador ) un mensaje con al menos el objetivo y la solución hallada*/
+        if (mq_send(mq, (char *)(msg + index), sizeof(msg[index]), 0) == ERROR)
+        {
+            mq_close(mq);
+            error(" mq_send ");
         }
 
         /*Realizará una espera de <LAG> milisegundos*/
-        ournanosleep(lag*MIL);
+        ournanosleep(lag * MILLON);
         /*Establezerá como siguiente objetivo la solución anterior*/
-        index = (i+1)%(SIZE+1);
-        msg[index].obj =msg[i%(SIZE+1)].sol;
+        index = (i + 1) % (SIZE + 1);
+        msg[index].obj = msg[i % (SIZE + 1)].sol;
     }
-    printf("[%d] Finishing...\n",getpid());
+    printf("[%d] Finishing...\n", getpid());
 
-     /*Liberará recursos y terminará*/
+    /*Liberará recursos y terminará*/
     mq_close(mq);
-    
+
     exit(EXIT_SUCCESS);
 }
 
-int minar(int obj){
-    int i, incr, rc[N_HILOS], Status;
+int minar(int obj)
+{
+    int i, incr;
     Entrada_Hash t[N_HILOS];
-    long solucion;
     pthread_t threads[N_HILOS];
     void *sol[N_HILOS];
 
     incr = ((int)MAX) / N_HILOS;
     encontrado = 0;
-    
+
     /*Creación de hilos*/
     for (i = 0; i < N_HILOS; i++)
     {
         t[i].ep = incr * i;
         t[i].eu = incr * (i + 1);
-        if (i == N_HILOS - 1)
-        { /*Para el caso en el que MAX no sea divisible por NHilos*/
+        if (i == N_HILOS - 1) /*Para el caso en el que MAX no sea divisible por NHilos*/
             t[i].eu = MAX;
-        }
         t[i].res = obj;
-        rc[i] = pthread_create(&threads[i], NULL, func_minero, (void *)(t + i));
 
-        if (rc[i])
+        if (pthread_create(&threads[i], NULL, func_minero, (void *)(t + i)))
         {
-                
+            for (; i >= 0; i--)
+                (void)pthread_join(threads[i], sol + i);
+
+            return -1;
         }
-    }    
+    }
 
     /*Joins de los hilos*/
     for (i = 0; i < N_HILOS; i++)
     {
-        rc[i] = pthread_join(threads[i], sol + i);
-        if (rc[i])
+        if (pthread_join(threads[i], sol + i))
         {
-                
+            for (i++; i < N_HILOS; i++)
+                (void)pthread_join(threads[i], sol + i);
+
+            return -1;
         }
+        if ((long)sol[i] != -1)
+            return (long)sol[i];
     }
 
-    for (i = 0; i < N_HILOS; i++)
-    {
-        if ((long)sol[i] != -1)
-        {
-            solucion = (long)sol[i];
-            break;
-        }
-    }
-        
-    return solucion;
+    return -1;
 }
-        
+
 void *func_minero(void *arg)
 {
     int i;
