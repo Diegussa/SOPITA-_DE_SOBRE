@@ -1,7 +1,7 @@
 /**
  * @file monitor.c
  * @author Diego Rodríguez y Alejandro García
- * @brief 
+ * @brief
  * @version 3
  * @date 2023-04-1
  *
@@ -39,10 +39,7 @@ int main(int argc, char *argv[])
     }
 
     if ((semCtrl = sem_open(NAME_SEM_CTRL, O_CREAT, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) /*Apertura de semáforo*/
-    {
-        perror("sem_open SemCtrl");
-        exit(EXIT_FAILURE);
-    }
+        error("sem_open SemCtrl");
 
     /*Petición a memoria compartida para que los procesos divergan*/
     if ((fd = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) == ERROR)
@@ -50,31 +47,21 @@ int main(int argc, char *argv[])
         if (errno == EEXIST)
         {
             if ((fd = shm_open(SHM_NAME, O_RDWR, 0)) == ERROR) /*Control de errores*/
-            {
-                perror(" Error opening the shared memory segment ");
-                exit(EXIT_FAILURE);
-            }
+                error(" Error opening the shared memory segment ");
             else /*Caso monitor*/
             {
 #ifdef DEBUG
                 printf("Monitor %d\n", getpid());
 #endif
                 if (monitor(fd, lag, semCtrl) == ERROR)
-                {
-                    perror("Error in monitor");
-                    exit(EXIT_FAILURE);
-                }
+                    error("Error in monitor");
                 /*Se desvinculan ambos recursos al ser nosotros los últimos en usarlos*/
                 shm_unlink(SHM_NAME);
                 sem_unlink(NAME_SEM_CTRL);
             }
         }
         else /*Control de errores*/
-        {
-            perror(" Error creating the shared memory segment ");
-            /*Controlar al otro proceso*/
-            exit(EXIT_FAILURE);
-        }
+            error(" Error creating the shared memory segment ");
     }
     else /*Caso comprobador*/
     {
@@ -82,11 +69,8 @@ int main(int argc, char *argv[])
         printf("Comprobador %d\n", getpid());
 #endif
         if (comprobador(fd, lag, semCtrl) == ERROR)
-        {
-            perror("Error in comprobador");
-            exit(EXIT_FAILURE);
-        }
+            error("Error in comprobador");
     }
-    
+
     exit(EXIT_SUCCESS);
 }

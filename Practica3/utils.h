@@ -20,6 +20,7 @@
 #define BIG_PRIME 573163
 #define MILLON 1000000
 #define MAX_LAG 1000 /*Un segundo*/
+#define SHARED 2
 // #define DEBUG
 
 typedef struct

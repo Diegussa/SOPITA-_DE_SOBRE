@@ -28,14 +28,14 @@ typedef enum
 {
     OBJ,
     SOL,
-    RES,
+    RES
 } NUMS; /*!< Enumeration of the different num values */
 
 struct _Shm_struct
 {
     sem_t sem_vacio, sem_mutex, sem_lleno;
     long num[N_SIZE][QUEUE_SIZE];
-};
+}; /*!< Structure of the messages between Monitor and COmprobador*/
 /*Esto debería alojarse en utils ya que lo comparten minero y comprobador*/
 
 STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
@@ -63,41 +63,35 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
         close(fd_shm);
         error("mmap");
     }
+    close(fd_shm); /*Cerramos el descriptor ya que tenemos un puntero a la "posición" de memoria compartida*/
 #ifdef DEBUG
     printf("Pasa mmap %d \n", getpid());
 #endif
 
-    close(fd_shm); /*Cerramos el descriptor ya que tenemos un puntero a la "posición" de memoria compartida*/
-
-    if (ERROR == sem_init(&(mapped->sem_mutex), 2, 1))
-    { /*Inicialización de los semaforos*/
+    /*Inicialización de los semaforos*/
+    if (ERROR == sem_init(&(mapped->sem_mutex), SHARED, 1))
+    {
         munmap(mapped, sizeof(Shm_struct));
         error("Sem_init mutex");
     }
-#ifdef DEBUG
-    printf("Pasa inicializa sem mutex %d\n", getpid());
-#endif
-    if (ERROR == sem_init(&(mapped->sem_vacio), 2, QUEUE_SIZE))
+
+    if (ERROR == sem_init(&(mapped->sem_vacio), SHARED, QUEUE_SIZE))
     {
         sem_destroy(&mapped->sem_mutex);
-        /*Comunicar de alguna forma a los otro proceso que fin*/
         munmap(mapped, sizeof(Shm_struct));
         error("Sem_init vacio");
     }
-#ifdef DEBUG
-    printf("Pasa inicializa sem vacio %d\n", getpid());
-#endif
-    if (ERROR == sem_init(&(mapped->sem_lleno), 2, 0))
-    {
 
+    if (ERROR == sem_init(&(mapped->sem_lleno), SHARED, 0))
+    {
         sem_destroy(&mapped->sem_vacio);
         sem_destroy(&mapped->sem_mutex);
         munmap(mapped, sizeof(Shm_struct));
-
         error("Sem_init lleno");
     }
+
 #ifdef DEBUG
-    printf("Pasa inicializa sem_lleno %d\n", getpid());
+    printf("Semáforos inicializados %d\n", getpid());
     sleep(2);
 #endif
     up(semCtrl); /*Indica a comprobador que los semáforos ya están inicializados*/
@@ -149,9 +143,8 @@ printf("comprobador fin recibido\n");
         }
     }
 
-    printf("[%d] Finishing...\n", getpid());
-
     /*Liberación de recursos y fin*/
+    printf("[%d] Finishing...\n", getpid());
     mq_unlink(MQ_NAME);
 #ifdef DEBUG
     sleep(1);
@@ -170,20 +163,19 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
 
     printf("[%d] Printing blocks...\n", getpid());
 
-    /*Mapeará el segmento de memoria*/
+    /*Mapeará el segmento de memoria y cerrará el descriptor ya que tenemos un puntero a la "posición" de mamoria compartida*/
     if ((mapped = (Shm_struct *)mmap(NULL, sizeof(Shm_struct), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0)) == MAP_FAILED)
     {
         close(fd_shm);
         error("Error doing mmap in monitor");
     }
-    /*Cerramos el descriptor ya que tenemos un puntero a la "posición" de mamoria compartida*/
     close(fd_shm);
 
     down(semCtrl); /*Espera a que comprobador inicialice los semáforos*/
     sem_close(semCtrl);
 
-    while (1)
-    { /*Extraerá un bloque realizando de consumidor en el esquema productor-consumidor*/
+    while (1) /*Extraerá un bloque realizando de consumidor en el esquema productor-consumidor*/
+    {
         down(&mapped->sem_lleno);
         down(&mapped->sem_mutex);
 
@@ -200,7 +192,6 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
 #ifdef DEBUG
             printf("MON FIN %ld -> %ldfin: %d\n", obj, sol, pow_hash(sol));
 #endif
-printf("monitor fin recibido\n");
             break;
         }
 

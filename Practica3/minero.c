@@ -47,10 +47,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Usage: %s <ROUNDS> <LAG>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
-    /*El numero de rondas que se va a realizar */
-    n_rounds = atoi(argv[1]);
-    /*el retraso en milisegundos entre cada ronda*/
-    lag = atoi(argv[2]);
+    
+    n_rounds = atoi(argv[1]); /*Número de rondas que se va a realizar */
+    lag = atoi(argv[2]); /*Retraso en milisegundos entre cada ronda*/
 
     if (n_rounds < 1 || n_rounds > MAX_ROUNDS || lag < 1 || lag > MAX_LAG)
     {
@@ -64,7 +63,6 @@ int main(int argc, char *argv[])
 
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
         error(" mq_open en minar");
-
     printf("[%d] Generating blocks...\n", getpid());
 
     /*Bucle de minería y mandar las soluciones*/
@@ -74,7 +72,7 @@ int main(int argc, char *argv[])
         if ((msg.sol = minar(msg.obj)) == ERROR)
             error("Error en minar");
 
-        /*Enviar el mensaje al Comprobador*/
+        /*Enviar el mensaje a Comprobador*/
         if (mq_send(mq, (char *)(&msg), sizeof(Message), 0) == ERROR)
         {
             mq_close(mq);
