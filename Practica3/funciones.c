@@ -28,7 +28,7 @@ typedef enum
 {
     OBJ,
     SOL,
-    RES, 
+    RES,
     FIN
 } NUMS; /*!< Enumeration of the different num values */
 
@@ -67,9 +67,9 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 #ifdef DEBUG
     printf("Pasa mmap %d \n", getpid());
 #endif
-    
+
     close(fd_shm); /*Cerramos el descriptor ya que tenemos un puntero a la "posición" de memoria compartida*/
-    
+
     if (ERROR == sem_init(&(mapped->sem_mutex), 2, 1))
     { /*Inicialización de los semaforos*/
         munmap(mapped, sizeof(Shm_struct));
@@ -90,11 +90,11 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 #endif
     if (ERROR == sem_init(&(mapped->sem_lleno), 2, 0))
     {
-        
+
         sem_destroy(&mapped->sem_vacio);
         sem_destroy(&mapped->sem_mutex);
         munmap(mapped, sizeof(Shm_struct));
-        
+
         error("Sem_init lleno");
     }
 #ifdef DEBUG
@@ -103,46 +103,36 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 #endif
     up(semCtrl); /*Indica a comprobador que los semáforos ya están inicializados*/
     sem_close(semCtrl);
-    /*CAMBIOS: Preparando la cola de mensajes*/
+
     attributes.mq_maxmsg = SIZE;
     attributes.mq_msgsize = sizeof(Message);
 
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
-    {
-        error(" mq_open ");
-    }
+        error(" mq_open en comprobador");
 
     while (1)
     {
-        /*CAMBIOS:Recibirá un bloque a través de mensajes por parte del minero*/
         if (mq_receive(mq, (char *)&msg, sizeof(Message), 0) == ERROR)
         {
             mq_close(mq);
-            /*Habría que comunicar al resto de procesos que ha habido un error*/
             error("mq_receive");
         }
         obj = msg.obj;
         sol = msg.sol;
         fin = msg.fin;
-        
+
         if (fin)
-        {
-/*Forma de decir que se ha acabado el fichero del que leíamos*/
+        { /*Forma de decir que se ha acabado el fichero del que leíamos*/
 #ifdef DEBUG
             printf("FIN %ld -> %ld %ld fin: %d\n", obj, sol, pow_hash(sol), fin);
 #endif
         }
-        
-        if (obj == pow_hash(sol)) /*Comprobación de la solución*/
-            res = 1; /*Respuesta correcta*/
-        else
-            res = 0; /*Respuesta incorrecta*/
+
+        res = (obj == pow_hash(sol)); /*Comprobación de la solución*/
 #ifdef DEBUG
         printf("Comprueba %ld -> %ld %ld fin: %d\n", obj, sol, pow_hash(sol), fin);
 #endif
-
         /*Se la trasladará al monitor a través de la memoria compartida*/
-        /* Esquema de productro-consumidor (El es el productor)*/
         down(&mapped->sem_vacio);
         down(&mapped->sem_mutex);
 
@@ -218,20 +208,17 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
             break;
         }
 
-        /*Mostrará por pantalla el resultado con la siguiente sintaxis*/
-        /*Solution accepted: %08ld --> %08ld o Solution rejected: %08ld !-> %08ld (Siendo el promer numero el objetivo y el segundo la solución)*/
+        /*Impresión por pantalla del resultado*/
         if (res)
             printf("Solution accepted: %08ld --> %08ld\n", obj, sol);
         else
             printf("Solution rejected: %08ld !-> %08ld\n", obj, sol);
-        
+
         ournanosleep(lag * MILLON); /*Espera de <lag> milisegundos */
-        /*Repetirá el ciclo de extracción y muestra hasta recibir un bloque especial que indique la finalización del sistema*/
     }
     printf("[%d] Finishing...\n", getpid());
 
-    /*Liberación de recursos y fin*/
-    /*Cerramos los recursos abiertos ya que nosotros somos los últimos en usarlos*/
+    /*Liberación de recursos y fin. Cerramos los recursos abiertos ya que nosotros somos los últimos en usarlos*/
     sem_destroy(&mapped->sem_vacio);
     sem_destroy(&mapped->sem_mutex);
     sem_destroy(&mapped->sem_lleno);
