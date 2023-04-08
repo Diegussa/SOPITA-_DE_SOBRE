@@ -35,7 +35,7 @@ struct _Shm_struct
 {
     sem_t sem_vacio, sem_mutex, sem_lleno;
     long num[N_SIZE][QUEUE_SIZE];
-}; /*!< Structure of the messages between Monitor and COmprobador*/
+}; /*!< Structure of the messages between Monitor and Comprobador*/
 /*Esto debería alojarse en utils ya que lo comparten minero y comprobador*/
 
 STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
