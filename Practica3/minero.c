@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 
     if (n_rounds < 1 || n_rounds > MAX_ROUNDS || lag < 1 || lag > MAX_LAG)
     {
-        fprintf(stderr, "%d < <N_PROCS> < %d and %d < <N_SECS> < %d\n", 1, MAX_ROUNDS, 1, MAX_LAG);
+        fprintf(stderr, "%d < <N_ROUNDS> < %d and %d < <N_SECS> < %d\n", 1, MAX_ROUNDS, 1, MAX_LAG);
         exit(EXIT_FAILURE);
     }
 
