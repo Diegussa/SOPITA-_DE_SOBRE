@@ -35,6 +35,23 @@ typedef struct
 int minar(int obj);
 void *func_minero(void *arg);
 
+/*Función privada que finaliza el programa en caso de error, indicandoselo a Comprobador*/
+void _error_minero(char *str, mqd_t mq, Message msg)
+{
+    if (str)
+        perror(str);
+
+    if (mq)
+    { /*Enviar mensaje indicando que se ha acabado*/
+        msg.obj = -1;
+        (void)mq_send(mq, (char *)(&msg), sizeof(Message), 0);
+
+        mq_close(mq);
+    }
+
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char *argv[])
 {
     int n_rounds, lag, i; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
@@ -42,16 +59,13 @@ int main(int argc, char *argv[])
     mqd_t mq;
     Message msg;
 
-    if (argc != 3) /*Control de errores*/
+    if (argc != 3) /*Control de parámetros de entrada*/
     {
         fprintf(stderr, "Usage: %s <ROUNDS> <LAG>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
-    
-    n_rounds = atoi(argv[1]); /*Número de rondas que se va a realizar */
-    lag = atoi(argv[2]); /*Retraso en milisegundos entre cada ronda*/
 
-    if (n_rounds < 1 || n_rounds > MAX_ROUNDS || lag < 1 || lag > MAX_LAG)
+    if ((n_rounds = atoi(argv[1])) < 1 || n_rounds > MAX_ROUNDS || (lag = atoi(argv[2])) < 1 || lag > MAX_LAG)
     {
         fprintf(stderr, "%d < <N_ROUNDS> < %d and %d < <N_SECS> < %d\n", 1, MAX_ROUNDS, 1, MAX_LAG);
         exit(EXIT_FAILURE);
@@ -62,7 +76,8 @@ int main(int argc, char *argv[])
     attributes.mq_msgsize = sizeof(Message);
 
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
-        error(" mq_open en minar");
+        _error_minero(" mq_open en minar", mq, msg);
+
     printf("[%d] Generating blocks...\n", getpid());
 
     /*Bucle de minería y mandar las soluciones*/
@@ -70,24 +85,19 @@ int main(int argc, char *argv[])
     {
         /*Construcción del mensaje*/
         if ((msg.sol = minar(msg.obj)) == ERROR)
-            error("Error en minar");
+            _error_minero("Error en minar", mq, msg);
 
         /*Enviar el mensaje a Comprobador*/
         if (mq_send(mq, (char *)(&msg), sizeof(Message), 0) == ERROR)
-        {
-            mq_close(mq);
-            error(" mq_send ");
-        }
-        ournanosleep(lag * MILLON); /*Espera de <LAG> milisegundos*/
+            _error_minero(" mq_send ", mq, msg);
+
+        ournanosleep(lag * MILLON); /*Espera de <lag> milisegundos*/
     }
-    
+
     /*Enviar mensaje indicando que se ha acabado*/
     msg.obj = -1;
     if (mq_send(mq, (char *)(&msg), sizeof(Message), 0) == ERROR)
-    {
-        mq_close(mq);
-        error(" mq_send ");
-    }
+        _error_minero(" mq_send ", mq, msg);
 
     /*Liberación de recursos y finalización*/
     printf("[%d] Finishing...\n", getpid());
@@ -130,7 +140,8 @@ int minar(int obj)
         if (pthread_join(threads[i], sol + i))
         {
             for (i++; i < N_HILOS; i++)
-                (void)pthread_join(threads[i], sol + i);
+                if (pthread_join(threads[i], sol + i))
+                    error(" mq_open en la unión de hilos");
 
             return ERROR;
         }

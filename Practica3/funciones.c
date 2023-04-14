@@ -137,8 +137,6 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 #ifdef DEBUG
             printf("FIN %ld -> %ld fin: %d\n", obj, sol, pow_hash(sol));
 #endif
-
-printf("comprobador fin recibido\n");
             break;
         }
     }
