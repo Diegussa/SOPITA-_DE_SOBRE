@@ -38,6 +38,26 @@ struct _Shm_struct
 }; /*!< Structure of the messages between Monitor and Comprobador*/
 /*Esto debería alojarse en utils ya que lo comparten minero y comprobador*/
 
+/*Función privada que finaliza el programa Comprobador en caso de error, indicandoselo a Monitor*/
+STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems, STATUS retorno)
+{
+    if (str)
+        perror(str);
+    if (fd_shm <= 0)
+        close(fd_shm);
+    if (mapped)
+        if (munmap(mapped, sizeof(Shm_struct)) == ERROR)
+            retorno = ERROR;
+    if (n_sems >= 1)
+        sem_destroy(&mapped->sem_vacio);
+    if (n_sems >= 2)
+        sem_destroy(&mapped->sem_mutex);
+    if (n_sems >= 3)
+        sem_destroy(&mapped->sem_lleno);
+
+    return retorno;
+}
+
 STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 {
     FILE *f;
@@ -51,44 +71,29 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
     printf("[%d] Checking blocks...\n", getpid());
     /*Mapeará el segmento de memoria*/
     if (ftruncate(fd_shm, sizeof(Shm_struct)) == ERROR)
-    {
-        close(fd_shm);
-        error("ftruncate");
-    }
+        return _finish_comprobador("ftruncate", fd_shm, NULL, 0, ERROR);
+
 #ifdef DEBUG
     printf("Pasa ftruncate %d\n", getpid());
 #endif
+
     if ((mapped = (Shm_struct *)mmap(NULL, sizeof(Shm_struct), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0)) == MAP_FAILED)
-    {
-        close(fd_shm);
-        error("mmap");
-    }
+        return _finish_comprobador("mmap", fd_shm, NULL, 0, ERROR);
     close(fd_shm); /*Cerramos el descriptor ya que tenemos un puntero a la "posición" de memoria compartida*/
+
 #ifdef DEBUG
     printf("Pasa mmap %d \n", getpid());
 #endif
 
     /*Inicialización de los semaforos*/
     if (ERROR == sem_init(&(mapped->sem_mutex), SHARED, 1))
-    {
-        munmap(mapped, sizeof(Shm_struct));
-        error("Sem_init mutex");
-    }
+        return _finish_comprobador("Sem_init mutex", 0, mapped, 0, ERROR);
 
     if (ERROR == sem_init(&(mapped->sem_vacio), SHARED, QUEUE_SIZE))
-    {
-        sem_destroy(&mapped->sem_mutex);
-        munmap(mapped, sizeof(Shm_struct));
-        error("Sem_init vacio");
-    }
+        return _finish_comprobador("Sem_init vacio", 0, mapped, 1, ERROR);
 
     if (ERROR == sem_init(&(mapped->sem_lleno), SHARED, 0))
-    {
-        sem_destroy(&mapped->sem_vacio);
-        sem_destroy(&mapped->sem_mutex);
-        munmap(mapped, sizeof(Shm_struct));
-        error("Sem_init lleno");
-    }
+        return _finish_comprobador("Sem_init lleno", 0, mapped, 2, ERROR);
 
 #ifdef DEBUG
     printf("Semáforos inicializados %d\n", getpid());
@@ -101,14 +106,14 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
     attributes.mq_msgsize = sizeof(Message);
 
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
-        error(" mq_open en comprobador");
+        return _finish_comprobador("Open mq en comprobador", 0, mapped, 3, ERROR);
 
     while (1)
     {
         if (mq_receive(mq, (char *)&msg, sizeof(Message), 0) == ERROR)
         {
             mq_close(mq);
-            error("mq_receive");
+            return _finish_comprobador("Receive mq en comprobador", 0, mapped, 3, ERROR);
         }
         obj = msg.obj;
         sol = msg.sol;
@@ -143,14 +148,12 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 
     /*Liberación de recursos y fin*/
     printf("[%d] Finishing...\n", getpid());
-    mq_unlink(MQ_NAME);
 #ifdef DEBUG
     sleep(1);
 #endif
-    if (munmap(mapped, sizeof(Shm_struct)) == ERROR)
-        error("munmap comprobador\n");
 
-    return OK;
+    mq_unlink(MQ_NAME);
+    return _finish_comprobador(NULL, 0, mapped, 3, OK);
 }
 
 STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
@@ -158,6 +161,7 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
     long obj, sol;
     int res, index = 0; /*Index apunta a la primera direccción llena*/
     Shm_struct *mapped;
+    STATUS st;
 
     printf("[%d] Printing blocks...\n", getpid());
 

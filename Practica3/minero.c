@@ -35,7 +35,7 @@ typedef struct
 int minar(int obj);
 void *func_minero(void *arg);
 
-/*Función privada que finaliza el programa en caso de error, indicandoselo a Comprobador*/
+/*Función que finaliza el programa en caso de error, indicandoselo a Comprobador*/
 void _error_minero(char *str, mqd_t mq, Message msg)
 {
     if (str)

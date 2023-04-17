@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
 {
     sem_t *semCtrl;
     int lag, fd;
+    STATUS st;
 
     if (argc != 2) /*Control de errores*/
     {
@@ -54,7 +55,7 @@ int main(int argc, char *argv[])
                 printf("Monitor %d\n", getpid());
 #endif
                 if (monitor(fd, lag, semCtrl) == ERROR)
-                    error("Error in monitor");
+                    perror("Error in monitor");
                 /*Se desvinculan ambos recursos al ser nosotros los últimos en usarlos*/
                 shm_unlink(SHM_NAME);
                 sem_unlink(NAME_SEM_CTRL);
