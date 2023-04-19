@@ -42,9 +42,7 @@ void _error_minero(char *str, mqd_t mq, Message msg)
         perror(str);
     if (mq)
     { /*Enviar mensaje indicando que se ha acabado*/
-
         msg.obj = -1;
-
         (void)mq_send(mq, (char *)(&msg), sizeof(Message), 0);
 
         mq_close(mq);
@@ -87,15 +85,14 @@ int main(int argc, char *argv[])
         /*Construcción del mensaje*/
         if ((msg.sol = minar(msg.obj)) == ERROR)
             _error_minero("Error en minar", mq, msg);
-        #ifdef DEBUG
-            printf("Minamos %d->%d-\n", msg.obj,msg.sol);
-        #endif
+#ifdef DEBUG
+        printf("Minamos %d->%d-\n", msg.obj, msg.sol);
+#endif
         /*Enviar el mensaje a Comprobador*/
         if (mq_send(mq, (char *)(&msg), sizeof(Message), 0) == ERROR)
             _error_minero(" mq_send ", mq, msg);
 
         ournanosleep(lag * MILLON); /*Espera de <lag> milisegundos*/
-
     }
 
     /*Enviar mensaje indicando que se ha acabado*/
@@ -119,12 +116,9 @@ int minar(int obj)
     void *sol[N_HILOS];
 
     encontrado = 0;
-  
-
     /*Creación de hilos*/
     for (i = 0; i < N_HILOS; i++)
-    {   
-
+    {
         t[i].ep = incr * i;
         if (i == N_HILOS - 1)
             t[i].eu = MAX;
@@ -136,7 +130,7 @@ int minar(int obj)
         {
             for (; i >= 0; i--)
                 (void)pthread_join(threads[i], sol + i);
-            
+
             return ERROR;
         }
     }
@@ -146,7 +140,6 @@ int minar(int obj)
     {
         if (pthread_join(threads[i], sol + i))
         {
-
             for (i++; i < N_HILOS; i++)
                 (void)pthread_join(threads[i], sol + i);
             perror(" mq_open en la unión de hilos");

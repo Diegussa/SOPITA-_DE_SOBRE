@@ -23,8 +23,6 @@
 #define MILMILLON  MIL*MILLON
 #define MAX_LAG 1000 /*Un segundo*/
 #define SHARED 2
-#define DEBUG
-#define TEST
 
 typedef struct
 {
