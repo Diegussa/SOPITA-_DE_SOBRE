@@ -54,7 +54,9 @@ STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems
         sem_destroy(&mapped->sem_mutex);
     if (n_sems >= 3)
         sem_destroy(&mapped->sem_lleno);
-
+#ifdef TEST
+            nanorandsleep();
+#endif
     return retorno;
 }
 
@@ -84,7 +86,9 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 #ifdef DEBUG
     printf("Pasa mmap %d \n", getpid());
 #endif
-
+#ifdef TEST
+            nanorandsleep();
+#endif
     /*Inicialización de los semaforos*/
     if (ERROR == sem_init(&(mapped->sem_mutex), SHARED, 1))
         return _finish_comprobador("Sem_init mutex", 0, mapped, 0, ERROR);
@@ -94,17 +98,20 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 
     if (ERROR == sem_init(&(mapped->sem_lleno), SHARED, 0))
         return _finish_comprobador("Sem_init lleno", 0, mapped, 2, ERROR);
-
+#ifdef TEST
+            nanorandsleep();
+#endif
 #ifdef DEBUG
     printf("Semáforos inicializados %d\n", getpid());
-    sleep(2);
 #endif
     up(semCtrl); /*Indica a comprobador que los semáforos ya están inicializados*/
     sem_close(semCtrl);
 
     attributes.mq_maxmsg = SIZE;
     attributes.mq_msgsize = sizeof(Message);
-
+#ifdef TEST
+            nanorandsleep();
+#endif
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
         return _finish_comprobador("Open mq en comprobador", 0, mapped, 3, ERROR);
 
@@ -117,7 +124,9 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
         }
         obj = msg.obj;
         sol = msg.sol;
-
+#ifdef TEST
+            nanorandsleep();
+#endif
         res = (obj == pow_hash(sol)); /*Comprobación de la solución*/
 #ifdef DEBUG
         printf("Comprueba %ld -> %ld: %d\n", obj, sol, pow_hash(sol));
@@ -125,12 +134,16 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
         /*Se la trasladará al monitor a través de la memoria compartida*/
         down(&mapped->sem_vacio);
         down(&mapped->sem_mutex);
-
+#ifdef TEST
+            nanorandsleep();
+#endif
         mapped->num[OBJ][index] = obj;
         mapped->num[SOL][index] = sol;
         mapped->num[RES][index] = res;
         index = (index + 1) % QUEUE_SIZE;
-
+#ifdef TEST
+            nanorandsleep();
+#endif
         up(&mapped->sem_mutex);
         up(&mapped->sem_lleno);
 
@@ -145,12 +158,12 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
             break;
         }
     }
-
+#ifdef TEST
+            nanorandsleep();
+#endif
     /*Liberación de recursos y fin*/
     printf("[%d] Finishing...\n", getpid());
-#ifdef DEBUG
-    sleep(1);
-#endif
+
 
     mq_unlink(MQ_NAME);
     return _finish_comprobador(NULL, 0, mapped, 3, OK);
@@ -172,7 +185,9 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
         error("Error doing mmap in monitor");
     }
     close(fd_shm);
-
+#ifdef TEST
+            nanorandsleep();
+#endif
     down(semCtrl); /*Espera a que comprobador inicialice los semáforos*/
     sem_close(semCtrl);
 
@@ -180,12 +195,16 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
     {
         down(&mapped->sem_lleno);
         down(&mapped->sem_mutex);
-
+#ifdef TEST
+            nanorandsleep();
+#endif
         obj = mapped->num[OBJ][index];
         sol = mapped->num[SOL][index];
         res = mapped->num[RES][index];
         index = (index + 1) % QUEUE_SIZE;
-
+#ifdef TEST
+            nanorandsleep();
+#endif
         up(&mapped->sem_mutex);
         up(&mapped->sem_vacio);
 
@@ -196,6 +215,9 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
 #endif
             break;
         }
+#ifdef TEST
+            nanorandsleep();
+#endif
 
         /*Impresión por pantalla del resultado*/
         if (res)
@@ -206,7 +228,9 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
         ournanosleep(lag * MILLON); /*Espera de <lag> milisegundos */
     }
     printf("[%d] Finishing...\n", getpid());
-
+#ifdef TEST
+            nanorandsleep();
+#endif
     /*Liberación de recursos y fin. Cerramos los recursos abiertos ya que nosotros somos los últimos en usarlos*/
     sem_destroy(&mapped->sem_vacio);
     sem_destroy(&mapped->sem_mutex);

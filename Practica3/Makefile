@@ -62,7 +62,9 @@ clean_min:
 	rm -v  minero $(MIN_OBJS)
 cs:
 	ls /dev/shm
+	ls /dev/mqueue
 
 rs:
 	 rm /dev/shm/shm*
 	 rm /dev/shm/sem*
+	 rm /dev/mqueue/mqueue
