@@ -43,6 +43,7 @@ STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems
 {
     if (str)
         perror(str);
+
     if (fd_shm <= 0)
         close(fd_shm);
     if (mapped)
@@ -55,7 +56,7 @@ STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems
     if (n_sems >= 3)
         sem_destroy(&mapped->sem_lleno);
 #ifdef TEST
-            nanorandsleep();
+    nanorandsleep();
 #endif
     return retorno;
 }
@@ -87,7 +88,7 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
     printf("Pasa mmap %d \n", getpid());
 #endif
 #ifdef TEST
-            nanorandsleep();
+    nanorandsleep();
 #endif
     /*Inicialización de los semaforos*/
     if (ERROR == sem_init(&(mapped->sem_mutex), SHARED, 1))
@@ -99,7 +100,7 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
     if (ERROR == sem_init(&(mapped->sem_lleno), SHARED, 0))
         return _finish_comprobador("Sem_init lleno", 0, mapped, 2, ERROR);
 #ifdef TEST
-            nanorandsleep();
+    nanorandsleep();
 #endif
 #ifdef DEBUG
     printf("Semáforos inicializados %d\n", getpid());
@@ -110,39 +111,49 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
     attributes.mq_maxmsg = SIZE;
     attributes.mq_msgsize = sizeof(Message);
 #ifdef TEST
-            nanorandsleep();
+    nanorandsleep();
 #endif
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
         return _finish_comprobador("Open mq en comprobador", 0, mapped, 3, ERROR);
 
     while (1)
     {
-        if (mq_receive(mq, (char *)&msg, sizeof(Message), 0) == ERROR)
+        if (mq_receive(mq, (char *)&msg, sizeof(Message), 0) == ERROR )
         {
+            down(&mapped->sem_vacio);
+            down(&mapped->sem_mutex);
+
+            mapped->num[OBJ][index] = -1;
+            mapped->num[SOL][index] = sol;
+            mapped->num[RES][index] = res;
+            index = (index + 1) % QUEUE_SIZE;
+
+            up(&mapped->sem_mutex);
+            up(&mapped->sem_lleno);
             mq_close(mq);
             return _finish_comprobador("Receive mq en comprobador", 0, mapped, 3, ERROR);
         }
         obj = msg.obj;
         sol = msg.sol;
 #ifdef TEST
-            nanorandsleep();
+        nanorandsleep();
 #endif
         res = (obj == pow_hash(sol)); /*Comprobación de la solución*/
 #ifdef DEBUG
-        printf("Comprueba %ld -> %ld: %d\n", obj, sol, pow_hash(sol));
+        printf("Comprueba %ld -> %ld: %ld\n", obj, sol, pow_hash(sol));
 #endif
         /*Se la trasladará al monitor a través de la memoria compartida*/
         down(&mapped->sem_vacio);
         down(&mapped->sem_mutex);
 #ifdef TEST
-            nanorandsleep();
+        nanorandsleep();
 #endif
         mapped->num[OBJ][index] = obj;
         mapped->num[SOL][index] = sol;
         mapped->num[RES][index] = res;
         index = (index + 1) % QUEUE_SIZE;
 #ifdef TEST
-            nanorandsleep();
+        nanorandsleep();
 #endif
         up(&mapped->sem_mutex);
         up(&mapped->sem_lleno);
@@ -153,17 +164,16 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
         if (obj == -1)
         {
 #ifdef DEBUG
-            printf("FIN %ld -> %ld fin: %d\n", obj, sol, pow_hash(sol));
+            printf("FIN %ld -> %ld fin: %ld\n", obj, sol, pow_hash(sol));
 #endif
             break;
         }
     }
 #ifdef TEST
-            nanorandsleep();
+    nanorandsleep();
 #endif
     /*Liberación de recursos y fin*/
     printf("[%d] Finishing...\n", getpid());
-
 
     mq_unlink(MQ_NAME);
     return _finish_comprobador(NULL, 0, mapped, 3, OK);
@@ -186,7 +196,7 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
     }
     close(fd_shm);
 #ifdef TEST
-            nanorandsleep();
+    nanorandsleep();
 #endif
     down(semCtrl); /*Espera a que comprobador inicialice los semáforos*/
     sem_close(semCtrl);
@@ -196,14 +206,14 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
         down(&mapped->sem_lleno);
         down(&mapped->sem_mutex);
 #ifdef TEST
-            nanorandsleep();
+        nanorandsleep();
 #endif
         obj = mapped->num[OBJ][index];
         sol = mapped->num[SOL][index];
         res = mapped->num[RES][index];
         index = (index + 1) % QUEUE_SIZE;
 #ifdef TEST
-            nanorandsleep();
+        nanorandsleep();
 #endif
         up(&mapped->sem_mutex);
         up(&mapped->sem_vacio);
@@ -211,12 +221,12 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
         if (obj == -1)
         {
 #ifdef DEBUG
-            printf("MON FIN %ld -> %ldfin: %d\n", obj, sol, pow_hash(sol));
+            printf("MON FIN %ld -> %ldfin: %ld\n", obj, sol, pow_hash(sol));
 #endif
             break;
         }
 #ifdef TEST
-            nanorandsleep();
+        nanorandsleep();
 #endif
 
         /*Impresión por pantalla del resultado*/
@@ -229,7 +239,7 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
     }
     printf("[%d] Finishing...\n", getpid());
 #ifdef TEST
-            nanorandsleep();
+    nanorandsleep();
 #endif
     /*Liberación de recursos y fin. Cerramos los recursos abiertos ya que nosotros somos los últimos en usarlos*/
     sem_destroy(&mapped->sem_vacio);
