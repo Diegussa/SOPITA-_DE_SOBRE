@@ -18,11 +18,13 @@
 
 #define NO_PID -1
 #define BIG_PRIME 573163
-#define MILLON 1000000
-#define MILMILLON 1000*MILLON
+#define MIL 1000
+#define MILLON  MIL* MIL
+#define MILMILLON  MIL*MILLON
 #define MAX_LAG 1000 /*Un segundo*/
 #define SHARED 2
-// #define DEBUG
+#define DEBUG
+#define TEST
 
 typedef struct
 {
@@ -73,7 +75,7 @@ void nanorandsleep();
  *
  * @return Nothing
  */
-void ournanosleep(int t);
+void ournanosleep(long t);
 
 /**
  * @brief Prints error message and finishes with error

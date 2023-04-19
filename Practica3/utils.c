@@ -37,8 +37,15 @@ void nanorandsleep(){
   nanosleep(&time, NULL);
 }
 
-void ournanosleep(int t){
-struct timespec time ={t/MILMILLON,t%MILLMILLON};
+void ournanosleep(long t){
+  long aux  = t;
+  struct timespec time;
+
+  t = t/MIL;
+  t = t/MIL;
+  t  = t / MIL;
+  time.tv_sec = (time_t)t;
+  time.tv_nsec =(time_t)aux -t*MIL * MIL *MIL;
   nanosleep(&time, NULL);
 }
 
