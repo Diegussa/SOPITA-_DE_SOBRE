@@ -44,13 +44,13 @@ run_mon:
 	./monitor 100
 
 run_monv:
-	valgrind --leak-check=full --show-leak-kinds=all ./monitor 2 10
+	valgrind --leak-check=full --show-leak-kinds=all ./monitor 100
 
 run_min:
-	./monitor 10 5
+	./minero 10 5
 
 run_minv:
-	valgrind --leak-check=full --show-leak-kinds=all ./monitor 2 10
+	valgrind --leak-check=full --show-leak-kinds=all ./minero 20 100
 #----------------------------------------------------------------------------------------------------------------------------
 clean:
 	rm -v monitor minero *.o
