@@ -1,0 +1,15 @@
+/**
+ * @file funciones_minero.h
+ * @author Diego Rodríguez y Alejandro García
+ * @brief
+ * @version 3
+ * @date 2023-04-1
+ *
+ */
+#ifndef FUNCIONES_MINERO_H
+#define FUNCIONES_MINERO_H
+
+#include "utils.h"
+#include "pow.h"
+
+#endif
