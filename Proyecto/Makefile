@@ -29,10 +29,13 @@ utils.o: utils.c utils.h
 	$(CC) -c $< 
 
 
-minero: minero.o pow.o utils.o
+minero: minero.o funciones_minero.o pow.o utils.o
 	$(CC) -o $@ $^ $(LIBS)
 
-minero.o: minero.c pow.h utils.h
+minero.o: minero.c funciones_minero.h pow.h utils.h
+	$(CC) -c $< 
+
+funciones_minero.o: funciones_minero.c funciones_minero.h pow.h utils.h
 	$(CC) -c $< 
 
 pow.o: pow.c pow.h

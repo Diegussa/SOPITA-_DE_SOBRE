@@ -19,15 +19,25 @@
 #define NO_PID -1
 #define BIG_PRIME 573163
 #define MIL 1000
-#define MILLON  MIL* MIL
-#define MILMILLON  MIL*MILLON
 #define MAX_LAG 1000 /*Un segundo*/
 #define SHARED 2
+#define MAX_MINERS 100
+#define MAX_N_VOTES 1000
+#define WORD_SIZE 1000
 
 typedef struct
 {
-  int obj, sol;
-} Message;
+  long id,pid,obj, sol, votos_a, votos_t, n_mineros;
+  long Wallet[MAX_MINERS][2];
+}Bloque;
+
+typedef struct{
+  long Wallets[MAX_MINERS][2];
+  long Votes_Min[MAX_MINERS][MAX_N_VOTES];
+  long n_mineros;
+  Bloque UltimoBloque;
+  Bloque BloqueActual;
+}System_info;
 
 typedef enum
 {

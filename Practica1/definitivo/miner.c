@@ -119,7 +119,6 @@ void monitor(int pipeLectura, int pipeEscritura, int nBusquedas)
 
 void minar(int nHilos, long nbusquedas, long busq, int pipeLectura, int pipeEscritura)
 {
-
     int i, j, incr, rc[MAX_HILOS], nbytes, Exito = 0, Status;
     entradaHash t[MAX_HILOS];
     long solucion, parSol[2];

@@ -32,6 +32,32 @@ int down_try(sem_t *sem)
     return sem_trywait(sem);
 }
 
+void print_bloque(int fd, Bloque *blq){
+  int i;
+    if(fd <0 || !blq)
+       return ;
+    dprintf(fd, "Id:  %d \n", bloque->id);
+    dprintf(fd, "Winner:  %d \n", bloque->pid);
+    dprintf(fd, "Target:  %d \n", bloque->obj);
+
+    if (bloque.votos_a = < bloque.votos_t / 2)
+    {
+        dprintf(fd, "Target:  %d (rejected)\n", bloque->sol, );
+    }
+    else
+    {
+        dprintf(fd, "Target:  %d (validated)\n", bloque->sol, );
+    }
+    dprintf(fd, "Votes:  %d/%d\n", bloque->votos_a, bloque->votos_t);
+    dprintf(fd, "Wallets: ",bloque->votos_a,bloque->votos_t);
+
+    for (i = 0; i < bloque->n_mineros; i++)
+    {
+        dprintf(fd, " %d:%d ", bloque->Wallet[i][0], bloque->votos_t[i][0]);
+    }
+    dprintf(fd," \n");
+}
+
 void nanorandsleep(){
   struct timespec time ={0,rand()%BIG_PRIME};
   nanosleep(&time, NULL);

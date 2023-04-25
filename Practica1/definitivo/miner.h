@@ -12,7 +12,6 @@
 #define MINER_H
 
 
-#define MAX POW_LIMIT-1
 #define MAX_HILOS 100
 
 typedef struct _entradaHash entradaHash;

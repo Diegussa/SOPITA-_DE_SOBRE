@@ -12,4 +12,7 @@
 #include "utils.h"
 #include "pow.h"
 
+
+void minero(int n_threads, int n_secs, int pid, int PipeLect, int PipeEscr, sem_t *mutex);
+
 #endif
