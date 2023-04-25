@@ -6,13 +6,13 @@
  *
  */
 
-#include "pow.h"
-
 #ifndef MINER_H
 #define MINER_H
 
+#include "pow.h"
 
 #define MAX_HILOS 100
+#define MAX POW_LIMIT -1
 
 typedef struct _entradaHash entradaHash;
 

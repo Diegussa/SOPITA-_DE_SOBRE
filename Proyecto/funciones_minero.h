@@ -15,4 +15,6 @@
 
 void minero(int n_threads, int n_secs, int pid, int PipeLect, int PipeEscr, sem_t *mutex);
 
+void registrador(int PipeLect, int PipeEscr);
+
 #endif

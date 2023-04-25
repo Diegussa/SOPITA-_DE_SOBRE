@@ -24,22 +24,29 @@
 #define MAX_MINERS 100
 #define MAX_N_VOTES 1000
 #define WORD_SIZE 1000
+#define SHM_NAME "/shm_seg"
 
 typedef struct
 {
-  long id, pid, obj, sol, votos_a, votos_t, n_mineros;
-  long Wallet[MAX_MINERS][2];
+  long id, pid, obj, sol, votos_a, n_votos, n_mineros;
+  long Wallets[MAX_MINERS][2];
 } Bloque;
 
 typedef struct
 {
-  sem_t primer_proc;
+  sem_t *primer_proc;
+  sem_t *MutexBAct;
   long Wallets[MAX_MINERS][2];
   long Votes_Min[MAX_MINERS][MAX_N_VOTES];
   long n_mineros;
   Bloque UltimoBloque;
   Bloque BloqueActual;
 } System_info;
+
+typedef struct
+{
+  int obj, sol;
+} Message;
 
 typedef enum
 {
@@ -70,6 +77,9 @@ int down(sem_t *sem);
  * @return Returns 0 on succes, -1 on Error and more info in errno
  */
 int down_try(sem_t *sem);
+
+void print_bloque(int fd, Bloque *bloque);
+
 
 /**
  * @brief Waits a random number of nanoseconds

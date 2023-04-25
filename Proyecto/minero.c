@@ -32,6 +32,7 @@ mineros y el monitor.*/
 #include <sys/stat.h>
 #include <unistd.h>
 #include <mqueue.h>
+
 #include "funciones_minero.h"
 #include "pow.h"
 #include "utils.h"
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
     struct mq_attr attributes;
     mqd_t mq;
     Message msg;
-    sem_t mutex_nmin;
+    sem_t *mutex_nmin;
 
     if (argc != 3) /*Control de parámetros de entrada*/
     {
@@ -65,8 +66,6 @@ int main(int argc, char *argv[])
     }
 
     /*Creación de semáforos*/
-    if ((mutex_nmin = sem_open(nameSemNmin, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
-        error("sem_open mutex_nmin");
 
     /*Creación de Pipes*/
     /*Creación de las pipeline REG->MIN y MIN->REG*/
@@ -76,6 +75,14 @@ int main(int argc, char *argv[])
     if (pipe(pipeMin_Reg) == -1)
         error("pipe creation");
 
+    if ((mutex_nmin = sem_open(nameSemNmin, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
+    {
+        if ((mutex_nmin = sem_open(nameSemNmin, O_CREAT, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
+        {
+            error("Error openning sem");
+            exit(EXIT_FAILURE);
+        }
+    }
     /*Creación del proceso Registrador*/
     if ((pid = fork()) == -1)
         error("Error forking");
@@ -85,19 +92,19 @@ int main(int argc, char *argv[])
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeReg_Min[1]); /*Escritura REG->MIN*/
         close(pipeMin_Reg[0]); /*Lectura MIN->REG*/
-        minero(n_threads, n_seconds, pid, pipeReg_Min[0], pipeMin_Reg[1], void minero(int n_threads, int n_secs, int pid, int PipeLect, int PipeEscr, mutex_nmin));
+        minero(n_threads, n_seconds, pid, pipeReg_Min[0], pipeMin_Reg[1], mutex_nmin);
         wait(&st);
         if (WIFEXITED(st) == EXIT_FAILURE)
             error("Registrador exited with ERROR\n");
     }
     else /*Registrador*/
     {
+        exit(EXIT_SUCCESS);
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[1]); /*Escritura MIN->REG*/
         close(pipeReg_Min[0]); /*Lectura REG->MIN*/
-        /*el encargado de registrar los bloques en un fichero. Comunicación mediante pipes*/
+        /*El encargado de registrar los bloques en un fichero. Comunicación mediante pipes*/
         registrador(pipeMin_Reg[0], pipeReg_Min[1]);
-        exit(EXIT_SUCCESS);
     }
 
     exit(EXIT_SUCCESS);
