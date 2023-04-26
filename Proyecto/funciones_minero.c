@@ -120,7 +120,7 @@ void minero(int n_threads, int n_secs, int pid, int PipeLect, int PipeEscr, sem_
     up(mutex);
     down(mutex);
     if ((handler_info_sist = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) != ERROR) /*Si la memoria no está creada*/
-    {printf("1\n");
+    {
     
         proc_index = 0;
 
@@ -137,13 +137,11 @@ void minero(int n_threads, int n_secs, int pid, int PipeLect, int PipeEscr, sem_
             close(handler_info_sist);
             error("Error mapping the shared memory segment info_sist");
         }
-printf("2\n");
         /*Inicializacion de la memoria compartida*/
-        if (sem_init((s_info->primer_proc), SHARED, 1) == ERROR)
+        if (sem_init(&(s_info->primer_proc), SHARED, 1) == ERROR)
             error("sem_open primer_proc");
-        if (sem_init((s_info->MutexBAct), SHARED, 1) == ERROR)
+        if (sem_init(&(s_info->MutexBAct), SHARED, 1) == ERROR)
             error("sem_open MutexBact");
-printf("3\n");
         for (i = 0; i < MAX_MINERS; i++)
         {
             s_info->Wallets[i][0] = 0;
@@ -187,7 +185,6 @@ printf("3\n");
     }
     close(handler_info_sist);
     up(mutex);
-exit(EXIT_SUCCESS);
     /*Preparación de la ronda: */
     /*Si es el primero establece un objetivo inicial*/
 
@@ -220,9 +217,9 @@ exit(EXIT_SUCCESS);
 #endif
 
         /*Tras salir de la minería se elige a un ganador de forma que evite las condiciones de carrera (semáforo)*/
-        if (down_try(s_info->primer_proc) != ERROR)
+        if (down_try(&(s_info->primer_proc)) != ERROR)
         { /*El primero se proclama proceso: Ganador*/
-            down(s_info->MutexBAct);
+            down(&(s_info->MutexBAct));
             ganador(s_info, obj, sol,proc_index,mutex);
         }
         else /*El resto procesos: Perdedor*/
@@ -357,7 +354,7 @@ void perdedor(System_info *sys, sigset_t *oldmask, int index_proc)
         sigsuspend(oldmask);
     got_sigUSR2 = 0;
     /*Exclusion Mutua Votar*/
-    while (down(sys->MutexBAct) == ERROR)
+    while (down(&(sys->MutexBAct)) == ERROR)
         ;
 #ifdef TEST
     nanorandsleep();
@@ -370,7 +367,7 @@ void perdedor(System_info *sys, sigset_t *oldmask, int index_proc)
         sys->Votes_Min[index_proc][sys->BloqueActual.id] = 1;
     }
 
-    if (up(sys->MutexBAct) == ERROR)
+    if (up(&(sys->MutexBAct)) == ERROR)
         error("Error in voters");
     /*Una vez recibido comprueba el bloque actual y registra su voto en función de si la solución es correcta*/
 

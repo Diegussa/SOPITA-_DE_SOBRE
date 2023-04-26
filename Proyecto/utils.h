@@ -34,8 +34,8 @@ typedef struct
 
 typedef struct
 {
-  sem_t *primer_proc;
-  sem_t *MutexBAct;
+  sem_t primer_proc;
+  sem_t MutexBAct;
   long Wallets[MAX_MINERS][2];
   long Votes_Min[MAX_MINERS][MAX_N_VOTES];
   long n_mineros;
