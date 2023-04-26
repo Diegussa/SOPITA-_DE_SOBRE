@@ -164,12 +164,14 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
         printf("178 y SIGTERM global = %d\n", got_sigTERM);
     }
 
-    
     /*Gestionar finalización:*/
     /*Razones por las que finaliza el proceso : SIGALARM o SIGINT*/
     printf("Desvinculo\n");
-    if (munmap(s_info, sizeof(System_info)) == ERROR)
-        exit(EXIT_FAILURE);
+    sem_close(&(s_info->primer_proc));
+    sem_close(&(s_info->MutexBAct));
+    printf("Semáforos desvinculados\n");
+    /*if (munmap(s_info, sizeof(System_info)) == ERROR)
+        exit(EXIT_FAILURE);*/
 
     /*Si es el último minero se libera todo y se envia al monitor (si está activo) el cierre del sistema*/
     down(mutexSysInfo);
