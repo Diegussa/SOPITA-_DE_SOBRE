@@ -31,6 +31,7 @@ mineros y el monitor.*/
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include <mqueue.h>
 
 #include "funciones_minero.h"
@@ -47,7 +48,7 @@ mineros y el monitor.*/
 
 int main(int argc, char *argv[])
 {
-    int n_seconds, n_threads, i, pid, st, pipeReg_Min[2], pipeMin_Reg[2]; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
+    int n_seconds, n_threads, i, pid, st, pipeMin_Reg[2]; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
     struct mq_attr attributes;
     mqd_t mq;
     Message msg;
@@ -69,9 +70,6 @@ int main(int argc, char *argv[])
 
     /*Creación de Pipes*/
     /*Creación de las pipeline REG->MIN y MIN->REG*/
-    if (pipe(pipeReg_Min) == -1)
-        error("pipe creation");
-
     if (pipe(pipeMin_Reg) == -1)
         error("pipe creation");
 
@@ -90,9 +88,8 @@ int main(int argc, char *argv[])
     else if (pid) /*Minero*/
     {
         /*Cierro los ficheros que no vamos a usar*/
-        close(pipeReg_Min[1]); /*Escritura REG->MIN*/
         close(pipeMin_Reg[0]); /*Lectura MIN->REG*/
-        minero(n_threads, n_seconds, pid, pipeReg_Min[0], pipeMin_Reg[1], mutex_nmin);
+        minero(n_threads, n_seconds, pid, pipeMin_Reg[1], mutex_nmin);
         wait(&st);
         if (WIFEXITED(st) == EXIT_FAILURE)
             error("Registrador exited with ERROR\n");
@@ -102,9 +99,8 @@ int main(int argc, char *argv[])
         exit(EXIT_SUCCESS);
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[1]); /*Escritura MIN->REG*/
-        close(pipeReg_Min[0]); /*Lectura REG->MIN*/
         /*El encargado de registrar los bloques en un fichero. Comunicación mediante pipes*/
-        registrador(pipeMin_Reg[0], pipeReg_Min[1]);
+        registrador(pipeMin_Reg[0]);
     }
 
     exit(EXIT_SUCCESS);

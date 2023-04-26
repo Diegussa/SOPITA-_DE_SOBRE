@@ -9,10 +9,23 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <mqueue.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <string.h>
+#include <time.h>
+#include <fcntl.h>
 #include <semaphore.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <signal.h>
+#include <errno.h>
 
 #include "pow.h"
 
@@ -26,18 +39,24 @@
 #define WORD_SIZE 1000
 #define SHM_NAME "/shm_seg"
 
+typedef struct{
+  pid_t pid;
+  int coins;
+}Wallet;
+
 typedef struct
 {
-  long id, pid, obj, sol, votos_a, n_votos, n_mineros;
-  long Wallets[MAX_MINERS][2];
+  long id, obj, sol, votos_a, n_votos, n_mineros;
+  pid_t pid;
+  Wallet Wallets[MAX_MINERS];
 } Bloque;
 
 typedef struct
 {
   sem_t primer_proc;
   sem_t MutexBAct;
-  long Wallets[MAX_MINERS][2];
-  long Votes_Min[MAX_MINERS][MAX_N_VOTES];
+  Wallet Wallets[MAX_MINERS];
+  long Votes_Min[MAX_MINERS];
   long n_mineros;
   Bloque UltimoBloque;
   Bloque BloqueActual;
@@ -104,5 +123,14 @@ void ournanosleep(long t);
  * @return Nothing
  */
 void error(char *str);
+
+void init_block(Bloque *b, Wallet *sys_Wallet, long id, long obj, long sol);
+void copy_block(Bloque *dest, Bloque *orig);
+void copy_wallet(Wallet *dest, Wallet *orig);
+int wallet_get_coins(Wallet *wallet);
+void wallet_set_coins(Wallet *wallet, int coins);
+pid_t wallet_get_pid(Wallet *wallet);
+void wallet_set_pid(Wallet *wallet, pid_t pid);
+
 
 #endif
