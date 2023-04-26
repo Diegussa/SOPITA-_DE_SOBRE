@@ -15,11 +15,10 @@ MIN_OBJS = minero.o pow.o
 
 all: monitor minero
 
-monitor: monitor.o funciones.o utils.o pow.o
+monitor: monitor.o utils.o pow.o
 	$(CC) -o $@ $^ $(LIBS)
 
-	
-monitor.o: monitor.c funciones.h utils.h pow.h
+monitor.o: monitor.c utils.h pow.h
 	$(CC) -c $< 
 
 funciones.o: funciones.c funciones.h utils.h pow.h
@@ -71,3 +70,9 @@ rs:
 	 rm /dev/shm/shm*
 	 rm /dev/shm/sem*
 	 rm /dev/mqueue/mqueue
+
+kill:
+	ps -ef|grep minero|while read NOM ID RESTO
+	> do 
+	> kill -9 $ID
+	> done

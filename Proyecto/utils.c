@@ -35,7 +35,7 @@ int down_try(sem_t *sem)
 void print_bloque(int fd, Bloque *bloque)
 {
   int i;
-  fd=STDOUT_FILENO;
+  
   if (fd < 0 || !bloque)
     return;
 
@@ -49,7 +49,7 @@ void print_bloque(int fd, Bloque *bloque)
   Wallets : <PID>:<N_MONEDAS> ...
   */
 
-  dprintf(fd, "Id:  %ld \n", bloque->id);
+  dprintf(fd, "\nId:  %ld \n", bloque->id);
   dprintf(fd, "Winner:  %d \n", bloque->pid);
   dprintf(fd, "Target:  %ld \n", bloque->obj);
 
@@ -63,7 +63,6 @@ void print_bloque(int fd, Bloque *bloque)
 
   for (i = 0; i < bloque->n_mineros; i++)
     dprintf(fd, " %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
-
   dprintf(fd, " \n");
 }
 

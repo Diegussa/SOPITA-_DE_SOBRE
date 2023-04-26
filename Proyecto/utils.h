@@ -38,6 +38,8 @@
 #define MAX_N_VOTES 1000
 #define WORD_SIZE 1000
 #define SHM_NAME "/shm_seg"
+#define MQ_NAME "/mqueue"
+#define Q_SIZE 5
 
 typedef struct{
   pid_t pid;
