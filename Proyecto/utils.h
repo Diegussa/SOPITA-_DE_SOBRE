@@ -46,7 +46,8 @@ typedef struct{
 
 typedef struct
 {
-  long id, obj, sol, votos_a, n_votos, n_mineros;
+  long id, obj, sol;
+  long votos_a, n_votos, n_mineros;
   pid_t pid;
   Wallet Wallets[MAX_MINERS];
 } Bloque;
@@ -126,7 +127,6 @@ void error(char *str);
 
 void errorClose(char *str, int handler);
 
-void init_block(Bloque *b, Wallet *sys_Wallet, long id, long obj, long sol);
 void copy_block(Bloque *dest, Bloque *orig);
 void copy_wallet(Wallet *dest, Wallet *orig);
 int wallet_get_coins(Wallet *wallet);

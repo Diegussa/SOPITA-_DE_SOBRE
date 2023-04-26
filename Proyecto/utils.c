@@ -35,13 +35,25 @@ int down_try(sem_t *sem)
 void print_bloque(int fd, Bloque *bloque)
 {
   int i;
+  fd=STDOUT_FILENO;
   if (fd < 0 || !bloque)
     return;
+
+  /*Formato del bloque: */
+  /*
+  Id :  <Id del bloque>
+  Winner : <PID>
+  Target: <TARGET>
+  Solution: <Solución propuesta>
+  Votes : <N_VOTES_ACCEPT>/<N_VOTES>
+  Wallets : <PID>:<N_MONEDAS> ...
+  */
+
   dprintf(fd, "Id:  %ld \n", bloque->id);
   dprintf(fd, "Winner:  %d \n", bloque->pid);
   dprintf(fd, "Target:  %ld \n", bloque->obj);
 
-  if ((bloque->votos_a)  <= (bloque->n_votos / 2))
+  if ((bloque->votos_a) <= (bloque->n_votos / 2))
     dprintf(fd, "Target:  %ld (rejected)\n", bloque->sol);
   else
     dprintf(fd, "Target:  %ld (validated)\n", bloque->sol);
@@ -50,8 +62,8 @@ void print_bloque(int fd, Bloque *bloque)
   dprintf(fd, "Wallets:");
 
   for (i = 0; i < bloque->n_mineros; i++)
-    dprintf(fd, " %d:%d ",wallet_get_pid(&(bloque->Wallets[i])),  wallet_get_coins(&(bloque->Wallets[i])));
-  
+    dprintf(fd, " %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
+
   dprintf(fd, " \n");
 }
 
@@ -86,7 +98,7 @@ void errorClose(char *str, int handler)
 {
   if (str)
     perror(str);
-  
+
   close(handler);
 
   exit(EXIT_FAILURE);
@@ -94,56 +106,63 @@ void errorClose(char *str, int handler)
 
 void copy_block(Bloque *dest, Bloque *orig)
 {
-    int i;
+  int i;
 
-    if (orig == NULL || dest == NULL)
-        return;
+  if (orig == NULL || dest == NULL)
+    return;
 
-    dest->n_votos = orig->n_votos;
-    dest->votos_a = orig->votos_a;
-    dest->n_mineros = orig->n_mineros;
-    dest->obj = orig->obj;
-    dest->pid = orig->pid;
-    dest->sol = orig->sol;
-    dest->id = orig->id;
 
-    for (i = 0; i < MAX_MINERS; i++)
-        copy_wallet(&(dest->Wallets[i]), &(orig->Wallets[i]));
+  dest->id = orig->id;
+  dest->obj = orig->obj;
+  dest->sol = orig->sol;
+
+  dest->votos_a = orig->votos_a;
+  dest->n_votos = orig->n_votos;
+  dest->n_mineros = orig->n_mineros;
+  
+  dest->pid = orig->pid;
+
+  for (i = 0; i < MAX_MINERS; i++)
+    copy_wallet(&(dest->Wallets[i]), &(orig->Wallets[i]));
 }
 
 void copy_wallet(Wallet *dest, Wallet *orig)
 {
-    if (orig == NULL || dest == NULL)
-        return;
+  if (orig == NULL || dest == NULL)
+    return;
 
-    dest->pid = orig->pid;
-    dest->coins = orig->coins;
+  dest->pid = orig->pid;
+  dest->coins = orig->coins;
 }
 
-int wallet_get_coins(Wallet *wallet){
-    if(!wallet)
-        return -1;
+int wallet_get_coins(Wallet *wallet)
+{
+  if (!wallet)
+    return -1;
 
-    return wallet->coins;
+  return wallet->coins;
 }
 
-void wallet_set_coins(Wallet *wallet, int coins){
-    if(!wallet)
-        return;
+void wallet_set_coins(Wallet *wallet, int coins)
+{
+  if (!wallet)
+    return;
 
-    wallet->coins=coins;
+  wallet->coins = coins;
 }
 
-pid_t wallet_get_pid(Wallet *wallet){
-    if(!wallet)
-        return -1;
+pid_t wallet_get_pid(Wallet *wallet)
+{
+  if (!wallet)
+    return -1;
 
-    return wallet->pid;
+  return wallet->pid;
 }
 
-void wallet_set_pid(Wallet *wallet, pid_t pid){
-    if(!wallet)
-        return;
+void wallet_set_pid(Wallet *wallet, pid_t pid)
+{
+  if (!wallet)
+    return;
 
-    wallet->pid=pid;
+  wallet->pid = pid;
 }

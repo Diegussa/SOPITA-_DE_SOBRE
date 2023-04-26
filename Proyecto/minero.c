@@ -40,7 +40,6 @@ mineros y el monitor.*/
 
 #define SIZE 7 /*Debe ser menor o igual a 10*/
 #define MQ_NAME "/mqueue"
-#define nameSemNmin "/semNmin"
 #define MAX_THREADS 100
 #define MAX_SECS 100
 
@@ -73,13 +72,10 @@ int main(int argc, char *argv[])
     if (pipe(pipeMin_Reg) == -1)
         error("pipe creation");
 
-    if ((mutex_nmin = sem_open(nameSemNmin, O_CREAT | O_EXCL, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
+    if ((mutex_nmin = sem_open(nameSemNmin, O_CREAT, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
     {
-        if ((mutex_nmin = sem_open(nameSemNmin, O_CREAT, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
-        {
-            error("Error openning sem");
-            exit(EXIT_FAILURE);
-        }
+        error("Error openning sem");
+        exit(EXIT_FAILURE);
     }
     /*Creación del proceso Registrador*/
     if ((pid = fork()) == -1)
@@ -87,10 +83,15 @@ int main(int argc, char *argv[])
 
     else if (pid) /*Minero*/
     {
+        /*Setting of the alarm*/
+        if (alarm(n_seconds))
+            fprintf(stderr, "There is a previously established alarm\n");
+
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[0]); /*Lectura MIN->REG*/
         minero(n_threads, n_seconds, pid, pipeMin_Reg[1], mutex_nmin);
-        wait(&st); /*Espera a registrador*/
+        sem_close(mutex_nmin);
+        wait(&st); /*Finalmente esperar al proceso Registrador  e imprime un mensaje en caso de EXIT_FAILURE (de Registrador)*/
         if (WIFEXITED(st) == EXIT_FAILURE)
             error("Registrador exited with ERROR\n");
     }
@@ -98,10 +99,10 @@ int main(int argc, char *argv[])
     {
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[1]); /*Escritura MIN->REG*/
+        sem_close(mutex_nmin);
         /*El encargado de registrar los bloques en un fichero. Comunicación mediante pipes*/
         registrador(pipeMin_Reg[0]);
     }
-    
 
     exit(EXIT_SUCCESS);
 }

@@ -12,6 +12,8 @@
 #include "utils.h"
 #include "pow.h"
 
+#define nameSemNmin "/semNmin"
+
 
 void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutex);
 
