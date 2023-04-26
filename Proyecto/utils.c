@@ -82,6 +82,16 @@ void error(char *str)
   exit(EXIT_FAILURE);
 }
 
+void errorClose(char *str, int handler)
+{
+  if (str)
+    perror(str);
+  
+  close(handler);
+
+  exit(EXIT_FAILURE);
+}
+
 void copy_block(Bloque *dest, Bloque *orig)
 {
     int i;

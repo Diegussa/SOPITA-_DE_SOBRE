@@ -124,6 +124,8 @@ void ournanosleep(long t);
  */
 void error(char *str);
 
+void errorClose(char *str, int handler);
+
 void init_block(Bloque *b, Wallet *sys_Wallet, long id, long obj, long sol);
 void copy_block(Bloque *dest, Bloque *orig);
 void copy_wallet(Wallet *dest, Wallet *orig);

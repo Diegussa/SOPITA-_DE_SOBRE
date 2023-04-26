@@ -90,18 +90,18 @@ int main(int argc, char *argv[])
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[0]); /*Lectura MIN->REG*/
         minero(n_threads, n_seconds, pid, pipeMin_Reg[1], mutex_nmin);
-        wait(&st);
+        wait(&st); /*Espera a registrador*/
         if (WIFEXITED(st) == EXIT_FAILURE)
             error("Registrador exited with ERROR\n");
     }
     else /*Registrador*/
     {
-        exit(EXIT_SUCCESS);
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[1]); /*Escritura MIN->REG*/
         /*El encargado de registrar los bloques en un fichero. Comunicación mediante pipes*/
         registrador(pipeMin_Reg[0]);
     }
+    
 
     exit(EXIT_SUCCESS);
 }

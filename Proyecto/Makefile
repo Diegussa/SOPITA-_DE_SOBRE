@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS = -ansi -pedantic -g -Wall -ggdb 
 
 
-DFLAGS = -D ##DEBUG
+DFLAGS = -DDEBUG
 IFLAGS=-I. ##La opción -I se usa para indicar donde se encuentran los ficheros cabeceras (.h)
 
 LIBS= -lm -lpthread -lrt ### -lm enlaza la biblioteca matematica, -pthread enlaza la biblioteca de hilos
