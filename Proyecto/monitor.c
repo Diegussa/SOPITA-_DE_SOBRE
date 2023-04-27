@@ -81,7 +81,7 @@ int comprobador()
 
     printf("Esperando los mensajes:\n\n");
     while (1)
-    {
+    {   sleep(3);
         if (mq_receive(mq, (char *)&msg, sizeof(Bloque), 0) == ERROR)
             error("Error recibiendo mensajes en Monitor\n");
 

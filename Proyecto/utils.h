@@ -41,6 +41,8 @@
 #define MQ_NAME "/mqueue"
 #define Q_SIZE 5
 
+#define TESTS
+
 typedef struct
 {
   pid_t pid;

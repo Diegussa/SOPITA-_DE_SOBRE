@@ -25,7 +25,6 @@
 #define MAX POW_LIMIT - 1
 #define WAIT 100 * MIL *MIL
 #define MAX_TRY 5
-#define DEBUG
 
 int encontrado;
 
@@ -66,25 +65,21 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
     /*Creará una conexión a memoria para la comunicación de información del sistema :n_mineros, ... */
     down(mutexSysInfo);
     proc_index = initMem(&s_info);
-
     /*Registrar sus datos en el sistema (PIDs ,n_mineros...)*/
+    wallet_set_pid(&(s_info->Wallets[proc_index]), getpid());
+    wallet_set_coins(&(s_info->Wallets[proc_index]), 0);
+    up(mutexSysInfo);
 
 #ifdef DEBUG
     fprintf(stderr, "\033[0Mi pid es %ld y mi proc_index %d\n", (long)getpid(), proc_index);
 #endif
-    wallet_set_pid(&(s_info->Wallets[proc_index]), getpid());
-    wallet_set_coins(&(s_info->Wallets[proc_index]), 0);
-    up(mutexSysInfo);
+    printf("proc %d\n", proc_index);
 
     while (!got_sigUSR1)
         sigsuspend(&MaskWithNoSignals);
     got_sigUSR1 = 0;
 
-#ifdef DEBUG
-    fprintf(stderr, "\033[0;32mEspero a SIGUSR1: %d\n", getpid());
-#endif
-
-    down((mutexSysInfo)); /*Revisar*/
+    down((mutexSysInfo));
     s_info->n_mineros++;
     up((mutexSysInfo));
 
@@ -96,10 +91,6 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
     /*Bucle de minería y mandar las soluciones hasta que nos llegue un alarm de n_secs o un SIGINT*/
     while (!must_TERM)
     {
-#ifdef DEBUG
-        sleep(2);
-#endif
-        //block_all_signal(NULL);
         /*Espera el inicio de una ronda (SIGUSR1)*/
 
         /*Definición local de objetivo*/
@@ -109,9 +100,6 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
         {
             if (write(PipeEscr, &(s_info->UltimoBloque), sizeof(Bloque)) == -1)
                 error("Error mandando un paquete Registrador");
-#ifdef DEBUG
-            fprintf(stderr, "\033[0;33mAcabo de mandar un paquete por el pipe\n");
-#endif
         }
         /*Ronda de minado:*/
         sol = minar(n_threads, obj);
@@ -136,12 +124,9 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
         while (!got_sigUSR1 && !must_TERM)
             sigsuspend(&MaskWithNoSignals);
         got_sigUSR1 = 0;
-#ifdef DEBUG
-        fprintf(stderr, "\033[0;32mEspero a SIGUSR1: %d\n", getpid());
-#endif
-        if(sigprocmask(SIG_UNBLOCK, &MaskWithSignals, NULL)==ERROR){
-                    fprintf(stderr, "Error unbloqueando \n\n\n\n\n\n\n\n\n");
-        }
+
+        if (sigprocmask(SIG_UNBLOCK, &MaskWithSignals, NULL) == ERROR)
+            error("Error desbloqueando las señales");
     }
 
 #ifdef DEBUG
@@ -190,7 +175,7 @@ void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSys
     /*Preparación de votación*/
     down(&(sys->MutexBAct)); /*Revisar*/
     down(mutexSysInfo);
-    
+
     sys->BloqueActual.sol = sol;
     sys->BloqueActual.votos_a = 1;
     sys->BloqueActual.n_votos = 1;
@@ -226,12 +211,8 @@ void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSys
             break;
     }
 
-/*Una vez terminada la votación se comprueba el resulatado y se introduce el bloque correspondiente de memoria */
-/* Si se aceptado recibe una moneda ( aumenta el contador )*/
-#ifdef DEBUG
-    fprintf(stderr, "\033[0 REsultado:%ld %ld\n", sys->BloqueActual.votos_a, sys->BloqueActual.n_votos);
-#endif
-
+    /*Una vez terminada la votación se comprueba el resulatado y se introduce el bloque correspondiente de memoria */
+    /* Si se aceptado recibe una moneda ( aumenta el contador )*/
     down(mutexSysInfo);
     down(&(sys->MutexBAct));
     if (sys->BloqueActual.votos_a >= sys->BloqueActual.n_votos / 2)
@@ -245,7 +226,7 @@ void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSys
     /* Se deber´an implementar los mecanismos adecuados para garantizar que el envío se realiza si y solo si
     el monitor est´a esperando para recibirlo, por ejemplo a trav´es de un semaforo con nombre.*/
     down(&(sys->MutexBAct));
-    /*Manda a la cola de señales el bloque actual*/
+    /*Manda a la cola de mensajes el bloque actual*/
     if (mq_send(mq, (char *)(&(sys->BloqueActual)), sizeof(Bloque), 0) == ERROR)
     {
         if (must_TERM)
@@ -256,25 +237,15 @@ void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSys
             /*Reiniciar la minería con el envio de un SIGUSR1 a todos los mineros*/
             down(mutexSysInfo);
             for (i = 0; i < MAX_MINERS; i++)
-            {
                 if (wallet_get_pid(&(sys->Wallets[i])) != 0)
-                {
-#ifdef DEBUG
-                    fprintf(stderr, "\033[0;32mGanador envía SIGUSR1 a %ld i=%d\n", (long)wallet_get_pid(&(sys->Wallets[i])), i);
-#endif
                     (void)kill(wallet_get_pid(&(sys->Wallets[i])), SIGUSR1);
-                }
-            }
             up(mutexSysInfo);
             return;
         }
         error(" mq_send ");
     }
-
     up(&(sys->MutexBAct));
-#ifdef DEBUG
-    fprintf(stderr, "\033[0Acabo de mandar un mensaje\n");
-#endif
+
     /*Prepara la siguiente ronda de minería*/
     down(mutexSysInfo);
     down(&(sys->MutexBAct));
@@ -336,7 +307,7 @@ void perdedor(System_info *sys, sigset_t *oldmask, int index_proc)
 
 void registrador(int PipeLect)
 {
-    int nbytes=1, fd;
+    int nbytes = 1, fd;
     Bloque bloque;
     char Filename[WORD_SIZE];
 #ifdef DEBUG
@@ -405,7 +376,6 @@ STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t 
     sigfillset(No_signals);
     for (i = 0; i < n_signals; i++)
     {
-        printf("Added %d\n", i);
         if (sigaddset(Signals, sig[i]) == ERROR)
             return ERROR;
         if (sigdelset(No_signals, sig[i]) == ERROR)
@@ -435,18 +405,13 @@ void _handler_minero(int sig)
 {
     switch (sig)
     {
-    case SIGALRM :
-        printf("\033[0;31m ME LLEGÓ SIGALRM\n");
+    case SIGALRM:
+    case SIGTERM:
+    case SIGINT:
+        printf("\033[0;31m ME LLEGÓ Finalización\n");
         must_TERM = 1;
         break;
-    case SIGTERM :
-        printf("\033[0;31m ME LLEGÓ SIGTERM\n");
-        must_TERM = 1;
-        break;
-    case SIGINT :
-        printf("\033[0;31m ME LLEGÓ SIGINT\n");
-        must_TERM = 1;
-        break;
+
     case SIGUSR1:
 #ifdef DEBUG
         printf("\033[0;32m USR1 %ld\n", (long)getpid());
@@ -531,7 +496,7 @@ void *func_minero(void *arg)
 
 int initMem(System_info **s_info)
 { /*CORREGIR, en caso de error se lleva el down del mutexSysInfo*/
-    int i = 0;
+    int proc_index = 0;
     int handler_info_sist;
 
     if ((handler_info_sist = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) != ERROR) /*Si la memoria no está creada*/
@@ -568,8 +533,6 @@ int initMem(System_info **s_info)
         (*s_info)->BloqueActual.id = 0;
 
         got_sigUSR1 = 1;
-        close(handler_info_sist);
-        return 0;
     }
     else /*Si no es el primero simplemente abre el segmento, lo enlaza. Debe garantizarse que el sistema esta listo (Semáforo)*/
     {
@@ -583,10 +546,10 @@ int initMem(System_info **s_info)
             errorClose("Error mapping the shared memory segment info_sist", handler_info_sist);
 
         /*Looks for the first empty space*/
-        for (i = 0; i < MAX_MINERS && wallet_get_pid(&((*s_info)->Wallets[i])) != 0; i++)
+        for (proc_index = 0; proc_index < MAX_MINERS && wallet_get_pid(&((*s_info)->Wallets[proc_index])) != 0; proc_index++)
             ;
 
-        if (i == MAX_MINERS) /*En caso de que ya halla el máximo de mineros*/
+        if (proc_index == MAX_MINERS) /*En caso de que ya halla el máximo de mineros*/
         {
             (void)munmap((*s_info), sizeof(System_info));
             errorClose("Number of miners reached the maximum", handler_info_sist);
@@ -595,5 +558,5 @@ int initMem(System_info **s_info)
 
     close(handler_info_sist);
 
-    return i;
+    return proc_index;
 }

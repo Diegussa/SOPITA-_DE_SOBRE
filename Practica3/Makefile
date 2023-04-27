@@ -48,9 +48,6 @@ run_monv:
 
 run_min:
 	./minero 10 5
-	
-run_mins: 
-	./minero 10 5
 
 run_minv:
 	valgrind --leak-check=full --show-leak-kinds=all ./minero 20 100

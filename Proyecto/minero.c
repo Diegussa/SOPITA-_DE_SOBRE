@@ -47,10 +47,7 @@ mineros y el monitor.*/
 
 int main(int argc, char *argv[])
 {
-    int n_seconds, n_threads, i, pid, st, pipeMin_Reg[2]; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
-    struct mq_attr attributes;
-    mqd_t mq;
-    Message msg;
+    int n_seconds, n_threads, pid, st, pipeMin_Reg[2]; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
     sem_t *mutex_nmin;
 
     if (argc != 3) /*Control de parámetros de entrada*/
@@ -86,7 +83,7 @@ int main(int argc, char *argv[])
     {
         /*Setting the alarm*/
         if (alarm(n_seconds))
-            fprintf(stderr, "There is a previously established alarm\n");
+            error("There is a previously established alarm\n");
 
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[0]); /*Lectura MIN->REG*/
