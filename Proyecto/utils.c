@@ -53,10 +53,7 @@ void print_bloque(int fd, Bloque *bloque)
   dprintf(fd, "Winner:  %d \n", bloque->pid);
   dprintf(fd, "Target:  %ld \n", bloque->obj);
 
-  if ((bloque->votos_a) <= (bloque->n_votos / 2))
-    dprintf(fd, "Solution:  %ld (rejected)\n", bloque->sol);
-  else
-    dprintf(fd, "Solution:  %ld (validated)\n", bloque->sol);
+  dprintf(fd, "Solution:  %ld \n", bloque->sol);
 
   dprintf(fd, "Votes:  %ld/%ld\n", bloque->votos_a, bloque->n_votos);
   dprintf(fd, "Wallets:");
@@ -95,16 +92,6 @@ void error(char *str)
 {
   if (str)
     perror(str);
-
-  exit(EXIT_FAILURE);
-}
-
-void errorClose(char *str, int handler)
-{
-  if (str)
-    perror(str);
-
-  close(handler);
 
   exit(EXIT_FAILURE);
 }
@@ -178,4 +165,20 @@ STATUS block_all_signal(sigset_t *oldmask)
   sigfillset(&mask2);
   /*Block signals*/
   return sigprocmask(SIG_BLOCK, &mask2, oldmask);
+}
+
+void send_signals_miners(Wallet * w, int no_index, int signal){
+  int i;
+  
+  if(!w){
+    return;
+  }
+    for (i = 0; i < MAX_MINERS; i++)
+    {
+        if (wallet_get_pid(&(w[i])) != 0 && no_index != i )
+        {
+            if(kill(wallet_get_pid(&(w[i])), signal)==ERROR)
+                perror("Error sending signal");
+        }
+    }
 }

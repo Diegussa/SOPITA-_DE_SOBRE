@@ -23,7 +23,7 @@ typedef struct _Shm_struct Shm_struct;
  * @pre semCTRL Semáforo que indica cuando se crean el resto de semáforos
  * @return ERROR si algo ha salido mal y OK en caso contrario
  */
-STATUS comprobador(int fd, int lag, sem_t *semCtrl);
+STATUS comprobador(int fd, sem_t *semCtrl);
 
 /**
  * @brief Funcion principal de la rutina monitor
@@ -33,7 +33,7 @@ STATUS comprobador(int fd, int lag, sem_t *semCtrl);
  * @pre semCTRL Semáforo que indica cuando se han creado el resto de semáforos
  * @return ERROR si algo ha salido mal y OK en caso contrario
  */
-STATUS monitor(int fd,int lag, sem_t *semCtrl);
+STATUS monitor(int fd, sem_t *semCtrl);
 
 
 #endif

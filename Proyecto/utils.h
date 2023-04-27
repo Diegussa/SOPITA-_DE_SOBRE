@@ -29,7 +29,7 @@
 
 #include "pow.h"
 
-#define NO_PID -1
+#define NO_PARAMETER -1
 #define BIG_PRIME 573163
 #define MIL 1000
 #define MAX_LAG 1000 /*Un segundo*/
@@ -82,6 +82,7 @@ typedef enum
 /**
  * @brief Adds 1 unit to the semaphore
  * @author Alejandro García and Diego Rodríguez
+ * @param sem Pointer to the semaphore
  *
  * @return Returns 0 on succes, -1 on Error and more info in errno
  */
@@ -90,6 +91,7 @@ int up(sem_t *sem);
 /**
  * @brief Blocking call to get the semaphore
  * @author Alejandro García and Diego Rodríguez
+ * @param sem Pointer to the semaphore
  *
  * @return Returns 0 on succes, -1 on Error and more info in errno
  */
@@ -98,6 +100,7 @@ int down(sem_t *sem);
 /**
  * @brief It is a non blocking down
  * @author Alejandro García and Diego Rodríguez
+ * @param sem Pointer to the semaphore
  *
  * @return Returns 0 on succes, -1 on Error and more info in errno
  */
@@ -125,13 +128,18 @@ void ournanosleep(long t);
 /**
  * @brief Prints error message and finishes with error
  * @author Alejandro García and Diego Rodríguez
+ * @param str String to be printed
  *
  * @return Nothing
  */
 void error(char *str);
 
-void errorClose(char *str, int handler);
-
+/**
+ * @brief Copies 
+ * @author Alejandro García and Diego Rodríguez
+ *
+ * @return Nothing
+ */
 void copy_block(Bloque *dest, Bloque *orig);
 void copy_wallet(Wallet *dest, Wallet *orig);
 int wallet_get_coins(Wallet *wallet);
@@ -141,5 +149,6 @@ void wallet_set_pid(Wallet *wallet, pid_t pid);
 
 
 STATUS block_all_signal(sigset_t *oldmask);
+void send_signals_miners(Wallet * w, int no_index, int signal);
 
 #endif

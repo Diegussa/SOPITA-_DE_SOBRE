@@ -83,7 +83,7 @@ int main()
         printf("ERRORES");
         break;
     case 0:
-        
+        own(semCtrl);
         monitor();
         break;
     default:
