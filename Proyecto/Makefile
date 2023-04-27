@@ -56,6 +56,8 @@ run_minv:
 #----------------------------------------------------------------------------------------------------------------------------
 clean:
 	rm -v monitor minero *.o
+	rm Debug_*
+	rm reg*
 
 clean_mon:
 	rm -v monitor  $(MON_OBJS)
@@ -70,9 +72,6 @@ rs:
 	 rm /dev/shm/shm*
 	 rm /dev/shm/sem*
 	 rm /dev/mqueue/mqueue
-
+	
 kill:
-	ps -ef|grep minero|while read NOM ID RESTO
-	> do 
-	> kill -9 $ID
-	> done
+	ps -e | grep "minero" | cut -c-4 | xargs kill -9
