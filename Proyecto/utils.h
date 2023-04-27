@@ -101,7 +101,7 @@ int down(sem_t *sem);
 int down_try(sem_t *sem);
 
 void print_bloque(int fd, Bloque *bloque);
-
+void fprint_bloque(FILE *fd, Bloque *bloque);
 
 /**
  * @brief Waits a random number of nanoseconds
@@ -135,6 +135,7 @@ int wallet_get_coins(Wallet *wallet);
 void wallet_set_coins(Wallet *wallet, int coins);
 pid_t wallet_get_pid(Wallet *wallet);
 void wallet_set_pid(Wallet *wallet, pid_t pid);
+
 
 
 #endif

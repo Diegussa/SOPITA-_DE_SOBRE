@@ -19,7 +19,7 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutex);
 
 void registrador( int PipeLect);
 
-int minar(int n_threads, int obj);
+long minar(int n_threads, int obj);
 void *func_minero(void *arg);
 void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSysInfo, mqd_t mq);
 void perdedor(System_info *sys, sigset_t *oldmask, int index_proc);

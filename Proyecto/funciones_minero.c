@@ -93,10 +93,10 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
             s_info->Votes_Min[i] = 0;
         }
         /*Inicialización del número de mineros*/
-        s_info->n_mineros = 1;
+        s_info->n_mineros = 0;
         /*Inicialización del bloque actual*/
         s_info->BloqueActual.id = 0;
-        s_info->BloqueActual.obj = INIC;
+        s_info->BloqueActual.obj = INIC + 1;
         s_info->BloqueActual.id = 0;
         got_sigUSR1 = 1;
     }
@@ -117,28 +117,39 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
             (void)munmap(s_info, sizeof(System_info));
             errorClose("Number of miners reached the maximum", handler_info_sist);
         }
-
-        s_info->n_mineros++;
     }
     /*Registrar sus datos en el sistema (PIDs ,n_mineros...)*/
-    printf("Mi pid es %ld y mi proc_index %d\n", (long)getpid(), proc_index);
-    wallet_set_pid(&(s_info->Wallets[proc_index]), getpid());
-    wallet_set_pid(&(s_info->BloqueActual.Wallets[proc_index]), getpid());
-    wallet_set_coins(&(s_info->Wallets[proc_index]), 0);
 
-    close(handler_info_sist);
+#ifdef DEBUG
+    fprintf(stderr, "\033[0Mi pid es %ld y mi proc_index %d\n", (long)getpid(), proc_index);
+#endif
+    wallet_set_pid(&(s_info->Wallets[proc_index]), getpid());
+    wallet_set_coins(&(s_info->Wallets[proc_index]), 0);
     up(mutexSysInfo);
 
+    while (!got_sigUSR1)
+        sigsuspend(&oldmask);
+    got_sigUSR1 = 0;
+#ifdef DEBUG
+    fprintf(stderr, "\033[0;32mEspero a SIGUSR1: %d\n", getpid());
+#endif
+    close(handler_info_sist);
+
+    down((mutexSysInfo));
+    s_info->n_mineros++;
+    up((mutexSysInfo));
+
+    down(&(s_info->MutexBAct));
+    wallet_set_pid(&(s_info->BloqueActual.Wallets[proc_index]), getpid());
+    up(&(s_info->MutexBAct));
+    got_sigUSR2 = 0;
     while (!got_sigTERM)
     {
-        #ifdef DEBUG
+#ifdef DEBUG
         sleep(2);
-        #endif
+#endif
         /*Espera el inicio de una ronda (SIGUSR1)*/
-        printf("Espero a SIGUSR1\n");
-        while (!got_sigUSR1)
-            sigsuspend(&oldmask);
-        got_sigUSR1 = 0;
+
         /*Definición local de objetivo*/
         obj = s_info->BloqueActual.obj;
         /*Salvo en la primera se debe enviar el bloque de la ronda anterior al proceso Registrador*/
@@ -146,15 +157,18 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
         {
             if (write(PipeEscr, &(s_info->UltimoBloque), sizeof(Bloque)) == -1)
                 error("Error mandando un paquete Registrador");
+#ifdef DEBUG
+            fprintf(stderr, "\033[0;33mAcabo de mandar un paquete por el pipe\n");
+#endif
         }
-        printf("Acabo de mandar un paquete por el pipe\n");
+
         /*Ronda de minado:*/
         /*Bucle de minería y mandar las soluciones hasta que nos llegue un alarm de n_secs o un SIGINT*/
         /*Minado*/
         sol = minar(n_threads, obj);
 
 #ifdef DEBUG
-        printf("Minamos %d->%d-\n", obj, sol);
+        fprintf(stderr, "\033[0;34mMinamos %d->%d\n", obj, sol);
 #endif
 
         /*Tras salir de la minería se elige a un ganador de forma que evite las condiciones de carrera (semáforo)*/
@@ -165,22 +179,37 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
         }
         else /*El resto procesos: Perdedor*/
             perdedor(s_info, &oldmask, proc_index);
+
+        while (!got_sigUSR1 && !got_sigTERM)
+            sigsuspend(&oldmask);
+        got_sigUSR1 = 0;
+#ifdef DEBUG
+        fprintf(stderr, "\033[0;32mEspero a SIGUSR1: %d\n", getpid());
+#endif
     }
 
     /*Gestionar finalización:*/
-    printf("Me voy\n");
+
+#ifdef DEBUG
+    fprintf(stderr, "\033[0;31mMe voy:%d\n", getpid());
+#endif
     /*Razones por las que finaliza el proceso : SIGALARM o SIGINT*/
-    sem_close(&(s_info->primer_proc));
-    sem_close(&(s_info->MutexBAct));
 
     /*Si es el último minero se libera todo y se envia al monitor (si está activo) el cierre del sistema*/
     down(mutexSysInfo);
     s_info->n_mineros--;
     if (s_info->n_mineros == 0)
     {
-        printf("Soy el último\n");
+
+#ifdef DEBUG
+        fprintf(stderr, "\033[0Soy el ultimo:%d\n", getpid());
+#endif
+        sem_destroy(&(s_info->primer_proc));
+        sem_destroy(&(s_info->MutexBAct));
         shm_unlink(SHM_NAME);
         sem_unlink(nameSemNmin); /*Puede dar error en caso extremo de  que uno se una un par de líneas más arriba*/
+    }else{
+        wallet_set_pid(&(s_info->Wallets[proc_index]),0);
     }
     up(mutexSysInfo);
 
@@ -200,8 +229,7 @@ void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSys
     /*Prepara memoria compartida para la votación introduciendo la solución en el bloque actual
     e inicializando el listado de votos*/
 
-    while (down(&(sys->MutexBAct)) == ERROR)
-        ;
+    down(&(sys->MutexBAct));
 
     /*Preparación de votación*/
     down(mutexSysInfo);
@@ -218,7 +246,9 @@ void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSys
         if (wallet_get_pid(&(sys->Wallets[i])) && (i != proc_index))
         {
             (void)kill(wallet_get_pid(&(sys->Wallets[i])), SIGUSR2);
-            printf("Ganador envía SIGUSR2 a %ld\n", (long)wallet_get_pid(&(sys->Wallets[i])));
+#ifdef DEBUG
+            fprintf(stderr, "\033[0;34mGanador envía SIGUSR2 a %ld\n", (long)wallet_get_pid(&(sys->Wallets[i])));
+#endif
         }
     }
     up(mutexSysInfo);
@@ -226,44 +256,108 @@ void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSys
 
     /*Realiza esperas no activas cortas hasta que todos los procesos hallan votado o transcurra
        el máximo numero de intentos(podemos calentarnos y intentar quitar eso)*/
-    for (i = 0; i < MAX_TRY; i++)
+    for (i = 0; i < MAX_TRY && !got_sigTERM; i++)
     {
-        printf("esperando\n");
+#ifdef DEBUG
+        fprintf(stderr, "\033[0Intento:%d %ld\n", i, sys->n_mineros);
+#endif
         ournanosleep(WAIT);
         if (sys->BloqueActual.n_mineros == sys->BloqueActual.n_votos)
             break;
     }
+    if (got_sigTERM)
+    {
+        init_block(&(sys->BloqueActual), sys->Wallets, sys->UltimoBloque.id + 1, sol);
 
-    /*Una vez terminada la votación se comprueba el resulatado y se introduce el bloque correspondiente de memoria */
-    /* Si se aceptado recibe una moneda ( aumenta el contador )*/
+        /*Reiniciar la minería con el envio de un SIGUSR1 a todos los mineros*/
+        down(mutexSysInfo);
+        for (i = 0; i < MAX_MINERS; i++)
+        {
+            if (wallet_get_pid(&(sys->Wallets[i])) != 0)
+            {
+#ifdef DEBUG
+                fprintf(stderr, "\033[0;32mGanador envía SIGUSR1 a %ld i=%d\n", (long)wallet_get_pid(&(sys->Wallets[i])), i);
+#endif
+
+                (void)kill(wallet_get_pid(&(sys->Wallets[i])), SIGUSR1);
+            }
+        }
+        up(mutexSysInfo);
+        return;
+    }
+
+/*Una vez terminada la votación se comprueba el resulatado y se introduce el bloque correspondiente de memoria */
+/* Si se aceptado recibe una moneda ( aumenta el contador )*/
+#ifdef DEBUG
+    fprintf(stderr, "\033[0 REsultado:%ld %ld\n", sys->BloqueActual.votos_a, sys->BloqueActual.n_votos);
+#endif
+
+    down(mutexSysInfo);
+    down(&(sys->MutexBAct));
     if (sys->BloqueActual.votos_a >= sys->BloqueActual.n_votos / 2)
+    {
         wallet_set_coins(&(sys->BloqueActual.Wallets[proc_index]), wallet_get_coins(&(sys->BloqueActual.Wallets[proc_index])) + 1);
+        wallet_set_coins(&(sys->Wallets[proc_index]), wallet_get_coins(&(sys->Wallets[proc_index])) + 1);
+    }
+    up(&(sys->MutexBAct));
+    up(mutexSysInfo);
     /*Ahora se debe enviar el bloque resuelto por cola de mensajes al monitor si hay alguno activo*/
     /* Se deber´an implementar los mecanismos adecuados para garantizar que el envío se realiza si y solo si
     el monitor est´a esperando para recibirlo, por ejemplo a trav´es de un semaforo con nombre.*/
-
+    down(&(sys->MutexBAct));
     /*Manda a la cola de sañales el bloque actual*/
-    if (mq_send(mq, (char *)(&(sys->BloqueActual)), sizeof(Bloque), 0) == ERROR)
-            error(" mq_send ");
-    printf("Acabo de mandar un mensaje\n");
+    if (mq_send(mq, (char *)(&(sys->BloqueActual)), sizeof(Bloque), 0) == ERROR){
+        if(got_sigTERM){
+            copy_block(&(sys->UltimoBloque), &(sys->BloqueActual));
+            init_block(&(sys->BloqueActual), sys->Wallets, sys->UltimoBloque.id + 1, sol);
 
+        /*Reiniciar la minería con el envio de un SIGUSR1 a todos los mineros*/
+        down(mutexSysInfo);
+        for (i = 0; i < MAX_MINERS; i++)
+        {
+            if (wallet_get_pid(&(sys->Wallets[i])) != 0)
+            {
+#ifdef DEBUG
+                fprintf(stderr, "\033[0;32mGanador envía SIGUSR1 a %ld i=%d\n", (long)wallet_get_pid(&(sys->Wallets[i])), i);
+#endif
+
+                (void)kill(wallet_get_pid(&(sys->Wallets[i])), SIGUSR1);
+            }
+        }
+        up(mutexSysInfo);
+        return;
+        }
+        error(" mq_send ");
+
+    }
+        
+    up(&(sys->MutexBAct));
+#ifdef DEBUG
+    fprintf(stderr, "\033[0Acabo de mandar un mensaje\n");
+#endif
     /*Prepara la siguiente ronda de minería*/
+    down(mutexSysInfo);
+    down(&(sys->MutexBAct));
     copy_block(&(sys->UltimoBloque), &(sys->BloqueActual));
     init_block(&(sys->BloqueActual), sys->Wallets, sys->UltimoBloque.id + 1, sol);
-
+    up(&(sys->MutexBAct));
     /*Reiniciar la minería con el envio de un SIGUSR1 a todos los mineros*/
-    down(mutexSysInfo);
+
     for (i = 0; i < MAX_MINERS; i++)
     {
         if (wallet_get_pid(&(sys->Wallets[i])) != 0)
         {
-            printf("Ganador envía SIGUSR1 a %ld i=%d\n", (long)wallet_get_pid(&(sys->Wallets[i])), i);
+#ifdef DEBUG
+            fprintf(stderr, "\033[0;32mGanador envía SIGUSR1 a %ld i=%d\n", (long)wallet_get_pid(&(sys->Wallets[i])), i);
+#endif
+
             (void)kill(wallet_get_pid(&(sys->Wallets[i])), SIGUSR1);
         }
     }
     up(mutexSysInfo);
-    printf("43\n");
-
+#ifdef DEBUG
+    fprintf(stderr, "\033[0Fin ganador %d\n", getpid());
+#endif
     return;
 }
 
@@ -275,12 +369,13 @@ void perdedor(System_info *sys, sigset_t *oldmask, int index_proc)
         sigsuspend(oldmask);
     got_sigUSR2 = 0;
     /*Exclusion Mutua Votar*/
-    while (down(&(sys->MutexBAct)) == ERROR)
-        ;
+    down(&(sys->MutexBAct));
 #ifdef TEST
     nanorandsleep();
 #endif
-
+#ifdef DEBUG
+    fprintf(stderr, "\033[0 Perdedor vota %d\n", getpid());
+#endif
     /*Una vez recibido comprueba el bloque actual y registra su voto en función de si la solución es correcta*/
     sys->BloqueActual.n_votos++;
     sys->Votes_Min[index_proc] = 0;
@@ -292,7 +387,9 @@ void perdedor(System_info *sys, sigset_t *oldmask, int index_proc)
 
     if (up(&(sys->MutexBAct)) == ERROR)
         error("Error in voters");
-
+#ifdef DEBUG
+    fprintf(stderr, "\033[0Fin perdedor %d\n", getpid());
+#endif
     /*Entra en una espera no activa (Se realizará fuera de la función) hasta la siguiente votación*/
 }
 /*Si hay error se gestiona internamente y se realiza un exit()*/
@@ -301,17 +398,27 @@ void registrador(int PipeLect)
     int nbytes, val, fd;
     Bloque bloque;
     char Filename[WORD_SIZE];
+#ifdef DEBUG
+    FILE *fdebug;
+#endif
 
     sprintf(Filename, "reg%d.dat", getppid());
     printf("Registrador: Filename %s\n", Filename);
 
     if (!(fd = open(Filename, O_APPEND)))
         error("Error en registrador al abrir el fichero\n");
+#ifdef DEBUG
+    sprintf(Filename, "Debug_reg%d.dat", getppid());
+    fdebug = fopen(Filename, "w");
+#endif
     while (1)
     {
         if ((nbytes = read(PipeLect, &bloque, sizeof(Bloque))) == -1)
         {
             close(fd);
+#ifdef DEBUG
+            fclose(fdebug);
+#endif
             errorClose("Error reading bloque", PipeLect);
         }
 
@@ -320,13 +427,18 @@ void registrador(int PipeLect)
             /*Cuando se cierre la pipe se liberan los recursos y se llama a exit()*/
             close(fd);
             close(PipeLect);
-
+#ifdef DEBUG
+            fclose(fdebug);
+#endif
             printf("REGISTRADOR SE VA porque no hay escritores\n");
             exit(EXIT_SUCCESS);
         }
         /*Mientras las tuberías esten abiertas: se leen bloques usando dprintf (impresión en bytes)
      en un archivo que dependa del pid del padre (Minero)*/
         print_bloque(fd, &bloque);
+#ifdef DEBUG
+        fprint_bloque(fdebug, &bloque);
+#endif
     }
 }
 
@@ -386,18 +498,18 @@ void _handler_minero(int sig)
         got_sigTERM = 1;
         break;
     case SIGALRM:
-        printf("ME LLEGÓ SIALRM\n");
+        printf("\033[0;31mME LLEGÓ SIALRM\n");
         got_sigTERM = 1;
         break;
     case SIGUSR1:
 #ifdef DEBUG
-        printf("USR1 %ld\n", (long)getpid());
+        printf("\033[0;32mUSR1 %ld\n", (long)getpid());
 #endif
         got_sigUSR1 = 1;
         break;
     case SIGUSR2:
 #ifdef DEBUG
-        printf("USR2 %ld\n", (long)getpid());
+        printf("\033[0;34mUSR2 %ld\n", (long)getpid());
 #endif
         got_sigUSR2 = 1;
         break;
@@ -414,10 +526,10 @@ void _handler_minero(int sig)
     }
 }
 
-int minar(int n_threads, int obj)
+long minar(int n_threads, int obj)
 {
     int i, incr = ((int)MAX) / n_threads;
-    long solucion;
+    long solucion = -1;
     Entrada_Hash t[MAX_THREADS];
     pthread_t threads[MAX_THREADS];
     void *sol[MAX_THREADS];
@@ -454,8 +566,8 @@ int minar(int n_threads, int obj)
         if ((long)sol[i] != -1)
             solucion = (long)sol[i];
     }
-
-    return (int)solucion;
+    printf("SOL %ld->%ld=?%d \n", solucion, pow_hash(solucion), obj);
+    return (long)solucion;
 }
 
 void *func_minero(void *arg)
@@ -468,6 +580,7 @@ void *func_minero(void *arg)
         if (pow_hash(i) == e->res)
         {
             encontrado = 1;
+            printf("i: %ld\n", i);
             pthread_exit((void *)i);
         }
     }

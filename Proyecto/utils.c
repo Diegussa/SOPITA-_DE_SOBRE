@@ -54,16 +54,52 @@ void print_bloque(int fd, Bloque *bloque)
   dprintf(fd, "Target:  %ld \n", bloque->obj);
 
   if ((bloque->votos_a) <= (bloque->n_votos / 2))
-    dprintf(fd, "Target:  %ld (rejected)\n", bloque->sol);
+    dprintf(fd, "Solution:  %ld (rejected)\n", bloque->sol);
   else
-    dprintf(fd, "Target:  %ld (validated)\n", bloque->sol);
+    dprintf(fd, "Solution:  %ld (validated)\n", bloque->sol);
 
   dprintf(fd, "Votes:  %ld/%ld\n", bloque->votos_a, bloque->n_votos);
   dprintf(fd, "Wallets:");
 
-  for (i = 0; i < bloque->n_mineros; i++)
+  for (i = 0; i < MAX_MINERS; i++)
+   if (wallet_get_pid(&(bloque->Wallets[i])) != 0)
     dprintf(fd, " %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
   dprintf(fd, " \n");
+}
+
+
+void fprint_bloque(FILE *fd, Bloque *bloque)
+{
+  int i;
+  
+  if (!fd || !bloque)
+    return;
+
+  /*Formato del bloque: */
+  /*
+  Id :  <Id del bloque>
+  Winner : <PID>
+  Target: <TARGET>
+  Solution: <Solución propuesta>
+  Votes : <N_VOTES_ACCEPT>/<N_VOTES>
+  Wallets : <PID>:<N_MONEDAS> ...
+  */
+
+  fprintf(fd, "\nId:  %ld \n", bloque->id);
+  fprintf(fd, "Winner:  %d \n", bloque->pid);
+  fprintf(fd, "Target:  %ld \n", bloque->obj);
+
+  if ((bloque->votos_a) <= (bloque->n_votos / 2))
+    fprintf(fd, "Solution:  %ld (rejected)\n", bloque->sol);
+  else
+    fprintf(fd, "Solution:  %ld (validated)\n", bloque->sol);
+
+  fprintf(fd, "Votes:  %ld/%ld\n", bloque->votos_a, bloque->n_votos);
+  fprintf(fd, "Wallets:");
+
+  for (i = 0; i < bloque->n_mineros; i++)
+    fprintf(fd, " %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
+  fprintf(fd, " \n");
 }
 
 void nanorandsleep()

@@ -57,7 +57,7 @@ int main()
         error(" mq_open en Monitor");
 
     printf("Esperando los mensajes:\n\n");
-    for (i=0; i<5; i++){
+    for (i=0; i<20; i++){
         if (mq_receive(mq, (char *)&msg, sizeof(Bloque), 0) == ERROR )
             error("Error recibiendo mensajes en Monitor\n");
         
