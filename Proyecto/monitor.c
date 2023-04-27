@@ -54,15 +54,10 @@ int main()
         break;
     }
 
-    wait(&st);
-    if (WIFEXITED(st) == 0)
-        perror("Monitor exited with error");
+
     
     
-    /*Se desvinculan ambos recursos al ser nosotros los últimos en usarlos
-    sem_destroy(&mapped->sem_vacio);
-    sem_destroy(&mapped->sem_mutex);
-    sem_destroy(&mapped->sem_lleno);*/
+    /*Se desvinculan ambos recursos al ser nosotros los últimos en usarlos*/
 
     mq_unlink(MQ_NAME);
     shm_unlink(SHM_NAME2);

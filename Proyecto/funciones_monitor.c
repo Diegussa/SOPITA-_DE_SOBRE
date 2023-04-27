@@ -40,11 +40,14 @@ struct _Shm_struct
 void monitor_print_block(Bloque *blq, int res);
 
 /*Función privada que finaliza el programa Comprobador en caso de error, indicandoselo a Monitor*/
-STATUS finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems, STATUS retorno)
+STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems, STATUS retorno)
 {
+    int st;
     if (str)
         perror(str);
-
+    wait(&st);
+    if (WIFEXITED(st) == 0)
+        perror("Monitor exited with error");
     if (n_sems >= 1)
         sem_destroy(&mapped->sem_vacio);
     if (n_sems >= 2)
@@ -68,7 +71,7 @@ STATUS finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems,
 STATUS comprobador(int fd_shm, sem_t *semCtrl)
 {
     long obj, sol;
-    int res=0; /*Index apunta a la primera direccción vacía*/
+    int res = 0; /*Index apunta a la primera direccción vacía*/
     Shm_struct *mapped;
     struct mq_attr attributes;
     mqd_t mq;
@@ -149,7 +152,7 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
 #ifdef DEBUG
         printf("Comprueba %ld -> %ld: %ld\n", obj, sol, pow_hash(sol));
 #endif
-        if(msg.id == -1)
+        if (msg.id == -1)
             res = -1;
         /*Se la trasladará al monitor a través de la memoria compartida*/
         down(&mapped->sem_vacio);
@@ -175,7 +178,7 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
     /*Liberación de recursos y fin*/
     printf("[%d] Finishing...\n", getpid());
 
-    return finish_comprobador(NULL,fd_shm,mapped,3,OK);
+    return _finish_comprobador(NULL, fd_shm, mapped, 3, OK);
 }
 
 STATUS monitor(int fd_shm)
@@ -217,9 +220,9 @@ STATUS monitor(int fd_shm)
         monitor_print_block(&blq, res);
     }
     printf("[%d] Finishing...\n", getpid());
-    
+
     /*Liberación de recursos y fin. Cerramos los recursos abiertos ya que nosotros somos los últimos en usarlos*/
-    
+
     munmap(mapped, sizeof(Shm_struct));
 
     return OK;
