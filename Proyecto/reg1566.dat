@@ -1,0 +1,427 @@
+
+Id:  0 
+Winner:  1566 
+Target:  0 
+Solution:  38722988 
+Votes:  1/1
+Wallets: 1566:1  
+
+Id:  1 
+Winner:  1566 
+Target:  38722988 
+Solution:  82781454 
+Votes:  3/3
+Wallets: 1566:2  1565:0  1567:0  
+
+Id:  2 
+Winner:  1567 
+Target:  82781454 
+Solution:  59403743 
+Votes:  3/3
+Wallets: 1566:2  1565:0  1567:1  
+
+Id:  3 
+Winner:  1566 
+Target:  59403743 
+Solution:  44638907 
+Votes:  3/3
+Wallets: 1566:3  1565:0  1567:1  
+
+Id:  4 
+Winner:  1567 
+Target:  44638907 
+Solution:  98780967 
+Votes:  3/3
+Wallets: 1566:3  1565:0  1567:2  
+
+Id:  5 
+Winner:  1566 
+Target:  98780967 
+Solution:  49574592 
+Votes:  3/3
+Wallets: 1566:4  1565:0  1567:2  
+
+Id:  6 
+Winner:  1567 
+Target:  49574592 
+Solution:  16391022 
+Votes:  3/3
+Wallets: 1566:4  1565:0  1567:3  
+
+Id:  7 
+Winner:  1566 
+Target:  16391022 
+Solution:  41194344 
+Votes:  3/3
+Wallets: 1566:5  1565:0  1567:3  
+
+Id:  8 
+Winner:  1566 
+Target:  41194344 
+Solution:  61259182 
+Votes:  3/3
+Wallets: 1566:6  1565:0  1567:3  
+
+Id:  9 
+Winner:  1567 
+Target:  61259182 
+Solution:  18852291 
+Votes:  3/3
+Wallets: 1566:6  1565:0  1567:4  
+
+Id:  10 
+Winner:  1567 
+Target:  18852291 
+Solution:  74660642 
+Votes:  3/3
+Wallets: 1566:6  1565:0  1567:5  
+
+Id:  11 
+Winner:  1567 
+Target:  74660642 
+Solution:  59894312 
+Votes:  3/3
+Wallets: 1566:6  1565:0  1567:6  
+
+Id:  12 
+Winner:  1565 
+Target:  59894312 
+Solution:  55978326 
+Votes:  3/3
+Wallets: 1566:6  1565:1  1567:6  
+
+Id:  13 
+Winner:  1567 
+Target:  55978326 
+Solution:  18633092 
+Votes:  3/3
+Wallets: 1566:6  1565:1  1567:7  
+
+Id:  14 
+Winner:  1566 
+Target:  18633092 
+Solution:  61031588 
+Votes:  3/3
+Wallets: 1566:7  1565:1  1567:7  
+
+Id:  15 
+Winner:  1567 
+Target:  61031588 
+Solution:  64519942 
+Votes:  3/3
+Wallets: 1566:7  1565:1  1567:8  
+
+Id:  16 
+Winner:  1567 
+Target:  64519942 
+Solution:  64076854 
+Votes:  3/3
+Wallets: 1566:7  1565:1  1567:9  
+
+Id:  17 
+Winner:  1566 
+Target:  64076854 
+Solution:  3955668 
+Votes:  3/3
+Wallets: 1566:8  1565:1  1567:9  
+
+Id:  18 
+Winner:  1565 
+Target:  3955668 
+Solution:  27818400 
+Votes:  3/3
+Wallets: 1566:8  1565:2  1567:9  
+
+Id:  19 
+Winner:  1567 
+Target:  27818400 
+Solution:  53980520 
+Votes:  3/3
+Wallets: 1566:8  1565:2  1567:10  
+
+Id:  20 
+Winner:  1566 
+Target:  53980520 
+Solution:  85287223 
+Votes:  3/3
+Wallets: 1566:9  1565:2  1567:10  
+
+Id:  21 
+Winner:  1567 
+Target:  85287223 
+Solution:  36675415 
+Votes:  3/3
+Wallets: 1566:9  1565:2  1567:11  
+
+Id:  22 
+Winner:  1565 
+Target:  36675415 
+Solution:  55165943 
+Votes:  3/3
+Wallets: 1566:9  1565:3  1567:11  
+
+Id:  23 
+Winner:  1567 
+Target:  55165943 
+Solution:  73337952 
+Votes:  3/3
+Wallets: 1566:9  1565:3  1567:12  
+
+Id:  24 
+Winner:  1565 
+Target:  73337952 
+Solution:  55485482 
+Votes:  3/3
+Wallets: 1566:9  1565:4  1567:12  
+
+Id:  25 
+Winner:  1567 
+Target:  55485482 
+Solution:  77917774 
+Votes:  3/3
+Wallets: 1566:9  1565:4  1567:13  
+
+Id:  26 
+Winner:  1567 
+Target:  77917774 
+Solution:  93044524 
+Votes:  3/3
+Wallets: 1566:9  1565:4  1567:14  
+
+Id:  27 
+Winner:  1566 
+Target:  93044524 
+Solution:  44464223 
+Votes:  3/3
+Wallets: 1566:10  1565:4  1567:14  
+
+Id:  28 
+Winner:  1566 
+Target:  44464223 
+Solution:  47612067 
+Votes:  3/3
+Wallets: 1566:11  1565:4  1567:14  
+
+Id:  29 
+Winner:  1566 
+Target:  47612067 
+Solution:  61354674 
+Votes:  3/3
+Wallets: 1566:12  1565:4  1567:14  
+
+Id:  30 
+Winner:  1566 
+Target:  61354674 
+Solution:  80435972 
+Votes:  3/3
+Wallets: 1566:13  1565:4  1567:14  
+
+Id:  31 
+Winner:  1565 
+Target:  80435972 
+Solution:  28028209 
+Votes:  3/3
+Wallets: 1566:13  1565:5  1567:14  
+
+Id:  32 
+Winner:  1567 
+Target:  28028209 
+Solution:  89444567 
+Votes:  3/3
+Wallets: 1566:13  1565:5  1567:15  
+
+Id:  33 
+Winner:  1566 
+Target:  89444567 
+Solution:  46377727 
+Votes:  3/3
+Wallets: 1566:14  1565:5  1567:15  
+
+Id:  34 
+Winner:  1567 
+Target:  46377727 
+Solution:  36161813 
+Votes:  3/3
+Wallets: 1566:14  1565:5  1567:16  
+
+Id:  35 
+Winner:  1567 
+Target:  36161813 
+Solution:  98121011 
+Votes:  3/3
+Wallets: 1566:14  1565:5  1567:17  
+
+Id:  36 
+Winner:  1567 
+Target:  98121011 
+Solution:  74842432 
+Votes:  3/3
+Wallets: 1566:14  1565:5  1567:18  
+
+Id:  37 
+Winner:  1566 
+Target:  74842432 
+Solution:  48661783 
+Votes:  3/3
+Wallets: 1566:15  1565:5  1567:18  
+
+Id:  38 
+Winner:  1567 
+Target:  48661783 
+Solution:  73188711 
+Votes:  3/3
+Wallets: 1566:15  1565:5  1567:19  
+
+Id:  39 
+Winner:  1566 
+Target:  73188711 
+Solution:  47291014 
+Votes:  3/3
+Wallets: 1566:16  1565:5  1567:19  
+
+Id:  40 
+Winner:  1567 
+Target:  47291014 
+Solution:  73841435 
+Votes:  3/3
+Wallets: 1566:16  1565:5  1567:20  
+
+Id:  41 
+Winner:  1567 
+Target:  73841435 
+Solution:  27722120 
+Votes:  3/3
+Wallets: 1566:16  1565:5  1567:21  
+
+Id:  42 
+Winner:  1566 
+Target:  27722120 
+Solution:  12375753 
+Votes:  3/3
+Wallets: 1566:17  1565:5  1567:21  
+
+Id:  43 
+Winner:  1565 
+Target:  12375753 
+Solution:  27468809 
+Votes:  3/3
+Wallets: 1566:17  1565:6  1567:21  
+
+Id:  44 
+Winner:  1567 
+Target:  27468809 
+Solution:  74299000 
+Votes:  3/3
+Wallets: 1566:17  1565:6  1567:22  
+
+Id:  45 
+Winner:  1567 
+Target:  74299000 
+Solution:  92612890 
+Votes:  3/3
+Wallets: 1566:17  1565:6  1567:23  
+
+Id:  46 
+Winner:  1567 
+Target:  92612890 
+Solution:  29464047 
+Votes:  3/3
+Wallets: 1566:17  1565:6  1567:24  
+
+Id:  47 
+Winner:  1567 
+Target:  29464047 
+Solution:  13871941 
+Votes:  3/3
+Wallets: 1566:17  1565:6  1567:25  
+
+Id:  48 
+Winner:  1566 
+Target:  13871941 
+Solution:  8042633 
+Votes:  3/3
+Wallets: 1566:18  1565:6  1567:25  
+
+Id:  49 
+Winner:  1567 
+Target:  8042633 
+Solution:  8496979 
+Votes:  3/3
+Wallets: 1566:18  1565:6  1567:26  
+
+Id:  50 
+Winner:  1567 
+Target:  8496979 
+Solution:  69978721 
+Votes:  3/3
+Wallets: 1566:18  1565:6  1567:27  
+
+Id:  51 
+Winner:  1566 
+Target:  69978721 
+Solution:  43749352 
+Votes:  3/3
+Wallets: 1566:19  1565:6  1567:27  
+
+Id:  52 
+Winner:  1565 
+Target:  43749352 
+Solution:  76138254 
+Votes:  3/3
+Wallets: 1566:19  1565:7  1567:27  
+
+Id:  53 
+Winner:  1567 
+Target:  76138254 
+Solution:  37850123 
+Votes:  3/3
+Wallets: 1566:19  1565:7  1567:28  
+
+Id:  54 
+Winner:  1567 
+Target:  37850123 
+Solution:  17175469 
+Votes:  3/3
+Wallets: 1566:19  1565:7  1567:29  
+
+Id:  55 
+Winner:  1566 
+Target:  17175469 
+Solution:  43016024 
+Votes:  3/3
+Wallets: 1566:20  1565:7  1567:29  
+
+Id:  56 
+Winner:  1565 
+Target:  43016024 
+Solution:  50045678 
+Votes:  3/3
+Wallets: 1566:20  1565:8  1567:29  
+
+Id:  57 
+Winner:  1567 
+Target:  50045678 
+Solution:  97092092 
+Votes:  3/3
+Wallets: 1566:20  1565:8  1567:30  
+
+Id:  58 
+Winner:  1567 
+Target:  97092092 
+Solution:  27842768 
+Votes:  3/3
+Wallets: 1566:20  1565:8  1567:31  
+
+Id:  59 
+Winner:  1566 
+Target:  27842768 
+Solution:  59998749 
+Votes:  3/3
+Wallets: 1566:21  1565:8  1567:31  
+
+Id:  59 
+Winner:  1566 
+Target:  27842768 
+Solution:  59998749 
+Votes:  3/3
+Wallets: 1566:21  1565:8  1567:31  

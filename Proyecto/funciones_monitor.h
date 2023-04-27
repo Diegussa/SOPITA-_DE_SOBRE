@@ -33,7 +33,8 @@ STATUS comprobador(int fd, sem_t *semCtrl);
  * @pre semCTRL Semáforo que indica cuando se han creado el resto de semáforos
  * @return ERROR si algo ha salido mal y OK en caso contrario
  */
-STATUS monitor(int fd, sem_t *semCtrl);
+STATUS monitor(int fd);
 
+STATUS finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems, STATUS retorno);
 
 #endif

@@ -19,7 +19,6 @@
 
 #define QUEUE_SIZE 6 /*Creo que pasa a 5*/
 #define N_SIZE 4
-#define SHM_NAME "/shm_name"
 
 #define SIZE 7
 #define MQ_NAME "/mqueue"
@@ -35,12 +34,13 @@ struct _Shm_struct
 {
     sem_t sem_vacio, sem_mutex, sem_lleno;
     Bloque bloq[QUEUE_SIZE];
-    int in,out,val[QUEUE_SIZE];
+    int in, out, val[QUEUE_SIZE];
 }; /*!< Structure of the messages between Monitor and Comprobador*/
 /*Esto debería alojarse en utils ya que lo comparten minero y comprobador*/
+void monitor_print_block(Bloque *blq, int res);
 
 /*Función privada que finaliza el programa Comprobador en caso de error, indicandoselo a Monitor*/
-STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems, STATUS retorno)
+STATUS finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems, STATUS retorno)
 {
     if (str)
         perror(str);
@@ -65,11 +65,10 @@ STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems
 }
 
 /*Hay que repasar esto pero tiene beuna pinta hay que cambiar Shm_struct por un bloque*/
-STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
+STATUS comprobador(int fd_shm, sem_t *semCtrl)
 {
-    FILE *f;
-    long new_objetivo, new_solucion, obj, sol;
-    int res, index = 0; /*Index apunta a la primera direccción vacía*/
+    long obj, sol;
+    int res=0; /*Index apunta a la primera direccción vacía*/
     Shm_struct *mapped;
     struct mq_attr attributes;
     mqd_t mq;
@@ -123,16 +122,17 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
         return _finish_comprobador("Open mq en comprobador", 0, mapped, 3, ERROR);
 
-    while (1)
+    while (res != -1)
     {
+        printf("Receiving\n");
         /*Recepción del mensaje enviado por el Ganador*/
-        if (mq_receive(mq, (char *)&msg, sizeof(Bloque), 0) == ERROR )
+        if (mq_receive(mq, (char *)&msg, sizeof(Bloque), 0) == ERROR)
         {
             down(&mapped->sem_vacio);
             down(&mapped->sem_mutex);
             /*Insertar fin de ejecución*/
-             mapped->val = -1;
-            copy_block(&(mapped->bloq[mapped->in]),&msg);
+            mapped->val[mapped->in] = -1;
+            copy_block(&(mapped->bloq[mapped->in]), &msg);
             mapped->in = (mapped->in + 1) % QUEUE_SIZE;
 
             up(&mapped->sem_mutex);
@@ -149,52 +149,40 @@ STATUS comprobador(int fd_shm, int lag, sem_t *semCtrl)
 #ifdef DEBUG
         printf("Comprueba %ld -> %ld: %ld\n", obj, sol, pow_hash(sol));
 #endif
-        if(msg->pid == -1){
+        if(msg.id == -1)
             res = -1;
-        }
         /*Se la trasladará al monitor a través de la memoria compartida*/
         down(&mapped->sem_vacio);
         down(&mapped->sem_mutex);
 #ifdef TEST
         nanorandsleep();
 #endif
-        mapped->val = res;
-        copy_block(&(mapped->bloq[mapped->in]),&msg);
+        mapped->val[mapped->in] = res;
+        copy_block(&(mapped->bloq[mapped->in]), &msg);
         mapped->in = (mapped->in + 1) % QUEUE_SIZE;
 #ifdef TEST
         nanorandsleep();
 #endif
         up(&mapped->sem_mutex);
         up(&mapped->sem_lleno);
-
-        /*Realizará una espera de <lag> milisegundos */
-        ournanosleep(lag * MILLON);
-
-        if (res == -1)
-        {
-#ifdef DEBUG
-            printf("FIN %ld -> %ld fin: %ld\n", obj, sol, pow_hash(sol));
-#endif
-            break;
-        }
     }
 #ifdef TEST
     nanorandsleep();
 #endif
+#ifdef DEBUG
+    printf("FIN \n");
+#endif
     /*Liberación de recursos y fin*/
     printf("[%d] Finishing...\n", getpid());
 
-    mq_unlink(MQ_NAME);
-    return _finish_comprobador(NULL, 0, mapped, 3, OK);
+    return finish_comprobador(NULL,fd_shm,mapped,3,OK);
 }
 
-STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
+STATUS monitor(int fd_shm)
 {
-    long obj, sol;
-    int res, index = 0; /*Index apunta a la primera direccción llena*/
+    int res; /*Index apunta a la primera direccción llena*/
     Shm_struct *mapped;
     Bloque blq;
-    STATUS st;
 
     printf("[%d] Printing blocks...\n", getpid());
 
@@ -208,18 +196,16 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
 #ifdef TEST
     nanorandsleep();
 #endif
-    down(semCtrl); /*Espera a que comprobador inicialice los semáforos*/
-    sem_close(semCtrl);
 
-    while (1) /*Extraerá un bloque realizando de consumidor en el esquema productor-consumidor*/
+    while (res != -1) /*Extraerá un bloque realizando de consumidor en el esquema productor-consumidor*/
     {
         down(&mapped->sem_lleno);
         down(&mapped->sem_mutex);
 #ifdef TEST
         nanorandsleep();
 #endif
-        copy_block(&bloq,&(mapped->bloq[mapped->out]));
-        res = mapped->eval;
+        copy_block(&blq, &(mapped->bloq[mapped->out]));
+        res = mapped->val[mapped->out];
         mapped->out = (mapped->out + 1) % QUEUE_SIZE;
 #ifdef TEST
         nanorandsleep();
@@ -227,68 +213,38 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
         up(&mapped->sem_mutex);
         up(&mapped->sem_vacio);
 
-        if (res == -1)
-        {
-#ifdef DEBUG
-            printf("MON FIN \n");
-#endif
-            break;
-        }
-#ifdef TEST
-        nanorandsleep();
-#endif
-        /*Hay que cambiar el formato*/
         /*Impresión por pantalla del resultado*/
-        monitor_print_block(blq,res);
-        
-        ournanosleep(lag * MILLON); /*Espera de <lag> milisegundos */
+        monitor_print_block(&blq, res);
     }
     printf("[%d] Finishing...\n", getpid());
-#ifdef TEST
-    nanorandsleep();
-#endif
+    
     /*Liberación de recursos y fin. Cerramos los recursos abiertos ya que nosotros somos los últimos en usarlos*/
-    sem_destroy(&mapped->sem_vacio);
-    sem_destroy(&mapped->sem_mutex);
-    sem_destroy(&mapped->sem_lleno);
+    
     munmap(mapped, sizeof(Shm_struct));
 
     return OK;
 }
 
+void monitor_print_block(Bloque *bloque, int res)
+{
+    int i;
 
-void monitor_print_block(Bloque *blq,int res){
+    if (res == -1 || !bloque)
+        return;
 
-     int i;
+    printf("\nId:  %ld \n", bloque->id);
+    printf("Winner:  %d \n", bloque->pid);
+    printf("Target:  %ld \n", bloque->obj);
+    if (res)
+        printf("Solution:  %ld (validated)\n", bloque->sol);
+    else
+        printf("Solution:  %ld (rejected) \n", bloque->sol);
 
-  if (res < 0 || !blq)
-    return;
+    printf("Votes:  %ld/%ld\n", bloque->votos_a, bloque->n_votos);
+    printf("Wallets:");
 
-  /*Formato del bloque: */
-  /*
-  Id :  <Id del bloque>
-  Winner : <PID>
-  Target: <TARGET>
-  Solution: <Solución propuesta>
-  Votes : <N_VOTES_ACCEPT>/<N_VOTES>
-  Wallets : <PID>:<N_MONEDAS> ...
-  */
-
-  printf("\nId:  %ld \n", bloque->id);
-  printf("Winner:  %d \n", bloque->pid);
-  printf( "Target:  %ld \n", bloque->obj);
-if(res)
-    printf("Solution:  %ld (validated)\n", bloque->sol);
-else
-    printf("Solution:  %ld (rejected) \n", bloque->sol);
-
-  printf( "Votes:  %ld/%ld\n", bloque->votos_a, bloque->n_votos);
-  printf( "Wallets:");
-
-  for (i = 0; i < MAX_MINERS; i++)
-    if (wallet_get_pid(&(bloque->Wallets[i])) != 0)
-      printf( " %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
-  printf(" \n");
+    for (i = 0; i < MAX_MINERS; i++)
+        if (wallet_get_pid(&(bloque->Wallets[i])) != 0)
+            printf(" %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
+    printf(" \n");
 }
-
-

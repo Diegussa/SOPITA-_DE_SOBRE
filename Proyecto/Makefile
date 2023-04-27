@@ -15,18 +15,17 @@ MIN_OBJS = minero.o pow.o
 
 all: monitor minero
 
-monitor: monitor.o utils.o pow.o
+monitor: monitor.o funciones_monitor.o utils.o pow.o
 	$(CC) -o $@ $^ $(LIBS)
 
 monitor.o: monitor.c utils.h pow.h
 	$(CC) $(CFLAGS) -c $< 
 
-funciones.o: funciones.c funciones.h utils.h pow.h
+funciones_monitor.o: funciones_monitor.c funciones_monitor.h utils.h pow.h
 	$(CC) $(CFLAGS) -c $< 
 
 utils.o: utils.c utils.h
 	$(CC) $(CFLAGS) -c $< 
-
 
 minero: minero.o funciones_minero.o pow.o utils.o
 	$(CC) -o $@ $^ $(LIBS)
@@ -43,9 +42,9 @@ pow.o: pow.c pow.h
 run_all1: ./monitor 1000 ./monitor 500 ./minero 200 100  #Es posible que esto haga que se ejecuten en orden, no simultaneamente
 
 run_mins3: 
-	./minero 20 4 & ./minero 24 5 & ./minero 35 8
+	./minero 12 4 & ./minero 8 5 & ./minero 15 8
 
-run_mins10: 
+run_mins10:
 	./minero 20 40 & ./minero 24 50 & ./minero 35 80 & ./minero 20 4 & ./minero 24 5 & ./minero 35 8 & ./minero 45 30 & ./minero 44 5 & ./minero 60 3 & ./minero 34 10
 
 run_mon:

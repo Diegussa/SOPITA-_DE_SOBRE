@@ -35,8 +35,6 @@ mineros y el monitor.*/
 #include <mqueue.h>
 
 #include "funciones_minero.h"
-#include "pow.h"
-#include "utils.h"
 
 #define SIZE 7 /*Debe ser menor o igual a 10*/
 #define MQ_NAME "/mqueue"

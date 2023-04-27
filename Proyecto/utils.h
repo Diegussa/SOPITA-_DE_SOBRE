@@ -106,9 +106,6 @@ int down(sem_t *sem);
  */
 int down_try(sem_t *sem);
 
-void print_bloque(int fd, Bloque *bloque);
-void fprint_bloque(FILE *fd, Bloque *bloque);
-
 /**
  * @brief Waits a random number of nanoseconds
  * @author Alejandro García and Diego Rodríguez
@@ -120,6 +117,7 @@ void nanorandsleep();
 /**
  * @brief Waits a given number of nanoseconds
  * @author Alejandro García and Diego Rodríguez
+ * @param t number of nanoseconds of the sleep
  *
  * @return Nothing
  */
@@ -135,20 +133,49 @@ void ournanosleep(long t);
 void error(char *str);
 
 /**
- * @brief Copies 
+ * @brief Copies a Bloque
  * @author Alejandro García and Diego Rodríguez
+ * @param dest Pointer to the Bloque where the information is going to be copied
+ * @param orig Pointer to the Bloque where the information is going to be taken from
  *
  * @return Nothing
  */
 void copy_block(Bloque *dest, Bloque *orig);
+
+/**
+ * @brief Prints a Bloque
+ * @author Alejandro García and Diego Rodríguez
+ * @param fd file descriptor of the place where is going to be printed
+ * @param bloque Pointer to the Bloque that is going to be printed
+ *
+ * @return Returns 0 on succes, -1 on Error and more info in errno
+ */
+void print_bloque(int fd, Bloque *bloque);
+
 void copy_wallet(Wallet *dest, Wallet *orig);
 int wallet_get_coins(Wallet *wallet);
 void wallet_set_coins(Wallet *wallet, int coins);
 pid_t wallet_get_pid(Wallet *wallet);
 void wallet_set_pid(Wallet *wallet, pid_t pid);
 
-
+/**
+ * @brief Blocks all signals
+ * @author Alejandro García and Diego Rodríguez
+ * @param oldmask Pointer to the mask where the old mask is going to be saved
+ *
+ * @return Returns OK on succes, ERROR if something goes wrong
+ */
 STATUS block_all_signal(sigset_t *oldmask);
+
+/**
+ * @brief Sends a signal to the miners
+ * @author Alejandro García and Diego Rodríguez
+ * @param w Pointer to the wallet where the PIDs of the miners are saved
+ * @param no_index index of the PID that the signal is not going to be send to
+ * @param signal Value of the signal taht is going to be sent
+ *
+ * @return Returns OK on succes, ERROR if something goes wrong
+ */
 void send_signals_miners(Wallet * w, int no_index, int signal);
 
 #endif

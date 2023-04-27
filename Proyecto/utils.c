@@ -64,11 +64,6 @@ void print_bloque(int fd, Bloque *bloque)
   dprintf(fd, " \n");
 }
 
-void fprint_bloque(FILE *fd, Bloque *bloque)
-{
-  print_bloque(fileno(fd), bloque);
-}
-
 void nanorandsleep()
 {
   struct timespec time = {0, rand() % BIG_PRIME};

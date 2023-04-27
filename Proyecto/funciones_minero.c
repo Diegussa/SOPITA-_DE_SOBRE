@@ -16,8 +16,6 @@
 #include <pthread.h>
 #include <errno.h>
 
-#include "pow.h"
-#include "utils.h"
 #include "funciones_minero.h"
 
 #define INIC 0
@@ -444,13 +442,11 @@ void *func_minero(void *arg)
     Entrada_Hash *e = (Entrada_Hash *)arg;
 
     for (i = e->ep; (i < e->eu) && (encontrado == 0) && (got_sigUSR2 == 0); i++) /*Si se recibe una SIGUSR2 u otro hilo halla una solución significa que un proceso a encontrado la solución*/
-    {
         if (pow_hash(i) == e->res)
         {
             encontrado = 1;
             pthread_exit((void *)i);
         }
-    }
 
     pthread_exit((void *)(-1));
 }
