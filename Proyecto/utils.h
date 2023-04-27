@@ -41,10 +41,11 @@
 #define MQ_NAME "/mqueue"
 #define Q_SIZE 5
 
-typedef struct{
+typedef struct
+{
   pid_t pid;
   int coins;
-}Wallet;
+} Wallet;
 
 typedef struct
 {
@@ -137,5 +138,6 @@ pid_t wallet_get_pid(Wallet *wallet);
 void wallet_set_pid(Wallet *wallet, pid_t pid);
 
 
+STATUS block_all_signal(sigset_t *oldmask);
 
 #endif

@@ -24,6 +24,6 @@ void *func_minero(void *arg);
 void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSysInfo, mqd_t mq);
 void perdedor(System_info *sys, sigset_t *oldmask, int index_proc);
 void _handler_minero(int sig);
-STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *oldmask, void (*handler)(int));
+STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *oldmask1,sigset_t *oldmask, void (*handler)(int));
 
 #endif

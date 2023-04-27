@@ -35,7 +35,7 @@ int down_try(sem_t *sem)
 void print_bloque(int fd, Bloque *bloque)
 {
   int i;
-  
+
   if (fd < 0 || !bloque)
     return;
 
@@ -62,44 +62,14 @@ void print_bloque(int fd, Bloque *bloque)
   dprintf(fd, "Wallets:");
 
   for (i = 0; i < MAX_MINERS; i++)
-   if (wallet_get_pid(&(bloque->Wallets[i])) != 0)
-    dprintf(fd, " %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
+    if (wallet_get_pid(&(bloque->Wallets[i])) != 0)
+      dprintf(fd, " %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
   dprintf(fd, " \n");
 }
 
-
 void fprint_bloque(FILE *fd, Bloque *bloque)
 {
-  int i;
-  
-  if (!fd || !bloque)
-    return;
-
-  /*Formato del bloque: */
-  /*
-  Id :  <Id del bloque>
-  Winner : <PID>
-  Target: <TARGET>
-  Solution: <Solución propuesta>
-  Votes : <N_VOTES_ACCEPT>/<N_VOTES>
-  Wallets : <PID>:<N_MONEDAS> ...
-  */
-
-  fprintf(fd, "\nId:  %ld \n", bloque->id);
-  fprintf(fd, "Winner:  %d \n", bloque->pid);
-  fprintf(fd, "Target:  %ld \n", bloque->obj);
-
-  if ((bloque->votos_a) <= (bloque->n_votos / 2))
-    fprintf(fd, "Solution:  %ld (rejected)\n", bloque->sol);
-  else
-    fprintf(fd, "Solution:  %ld (validated)\n", bloque->sol);
-
-  fprintf(fd, "Votes:  %ld/%ld\n", bloque->votos_a, bloque->n_votos);
-  fprintf(fd, "Wallets:");
-
-  for (i = 0; i < bloque->n_mineros; i++)
-    fprintf(fd, " %d:%d ", wallet_get_pid(&(bloque->Wallets[i])), wallet_get_coins(&(bloque->Wallets[i])));
-  fprintf(fd, " \n");
+  print_bloque(fileno(fd), bloque);
 }
 
 void nanorandsleep()
@@ -146,7 +116,6 @@ void copy_block(Bloque *dest, Bloque *orig)
   if (orig == NULL || dest == NULL)
     return;
 
-
   dest->id = orig->id;
   dest->obj = orig->obj;
   dest->sol = orig->sol;
@@ -154,7 +123,7 @@ void copy_block(Bloque *dest, Bloque *orig)
   dest->votos_a = orig->votos_a;
   dest->n_votos = orig->n_votos;
   dest->n_mineros = orig->n_mineros;
-  
+
   dest->pid = orig->pid;
 
   for (i = 0; i < MAX_MINERS; i++)
@@ -200,4 +169,13 @@ void wallet_set_pid(Wallet *wallet, pid_t pid)
     return;
 
   wallet->pid = pid;
+}
+
+STATUS block_all_signal(sigset_t *oldmask)
+{
+  sigset_t mask2;
+
+  sigfillset(&mask2);
+  /*Block signals*/
+  return sigprocmask(SIG_BLOCK, &mask2, oldmask);
 }

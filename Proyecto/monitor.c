@@ -3,7 +3,6 @@
 enviar datos informativos sobre la ejecuci´on del sistema, de manera que se cree una salida ´unica
 para toda la red */
 
-
 /*El monitor est´a formado por dos procesos, el proceso padre, Comprobador, encargado de
 recibir los bloques por cola de mensajes y validarlos, y el proceso hijo, Monitor, encargado
 de mostrar la salida unificada. Estos procesos se comunican usando memoria compartida
@@ -35,6 +34,8 @@ pendientes si no hay un monitor activo.*/
 #include "pow.h"
 #include "utils.h"
 
+int monitor();
+int comprobador();
 /*
 #define SHM_NAME "/shm_name"
 #define NAME_SEM_CTRL "/semCTRL"*/
@@ -42,6 +43,28 @@ pendientes si no hay un monitor activo.*/
 int main()
 {
     sem_t *semCtrl;
+    pid_t pid;
+
+    switch (fork())
+    {
+    case -1:
+        printf("ERRORES");
+        break;
+    case 0:
+        monitor();
+        break;
+    default:
+        comprobador();
+        break;
+    }
+
+    printf("Monitor se va\n");
+
+    exit(EXIT_SUCCESS);
+}
+
+int comprobador()
+{
     int pid, fd;
     STATUS st;
     Bloque msg;
@@ -57,45 +80,27 @@ int main()
         error(" mq_open en Monitor");
 
     printf("Esperando los mensajes:\n\n");
-    for (i=0; i<20; i++){
-        if (mq_receive(mq, (char *)&msg, sizeof(Bloque), 0) == ERROR )
+    while (1)
+    {
+        if (mq_receive(mq, (char *)&msg, sizeof(Bloque), 0) == ERROR)
             error("Error recibiendo mensajes en Monitor\n");
-        
+
+        if (msg.id == -1)
+            break;
+
         if (pow_hash(msg.sol) == msg.obj)
             printf("\n\nComprobador dice que está bien\n");
         else
             printf("\n\nComprobador dice que está mal\n");
         print_bloque(STDOUT_FILENO, &msg);
     }
-
-    printf("Monitor se va\n");
-
-    /*
-    if ((semCtrl = sem_open(NAME_SEM_CTRL, O_CREAT, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED)
-        error("sem_open SemCtrl");
-
-    if ((fd = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) == ERROR)
-    {
-            error(" Error creating the shared memory segment ");
-    }
-    else 
-    if((pid = fork()) == -1){
-        error(" Error forking ");
-
-    }else if(pid){
-        if (comprobador(fd, lag, semCtrl) == ERROR)
-                    error("Error in comprobador");
-    }else{
-        if (monitor(fd, lag, semCtrl) == ERROR)
-                    error("Error in monitor");
-    }*/
-    
     /*Finalización*/
     if (mq_close(mq) == ERROR)
         error("mq_close en monitor");
 
     if (mq_unlink(MQ_NAME) == ERROR)
         error("mq_unlink en monitor");
-
-    exit(EXIT_SUCCESS);
+}
+int monitor(){
+    return 0;
 }

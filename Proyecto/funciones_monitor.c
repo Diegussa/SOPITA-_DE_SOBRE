@@ -250,3 +250,5 @@ STATUS monitor(int fd_shm, int lag, sem_t *semCtrl)
 
     return OK;
 }
+
+

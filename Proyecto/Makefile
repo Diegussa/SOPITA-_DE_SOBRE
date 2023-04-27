@@ -1,5 +1,5 @@
 CC=gcc 
-CFLAGS = -ansi -pedantic -g -Wall -ggdb 
+CFLAGS = -g -Wall -ggdb 
 
 
 DFLAGS = -DDEBUG
@@ -19,26 +19,26 @@ monitor: monitor.o utils.o pow.o
 	$(CC) -o $@ $^ $(LIBS)
 
 monitor.o: monitor.c utils.h pow.h
-	$(CC) -c $< 
+	$(CC) $(CFLAGS) -c $< 
 
 funciones.o: funciones.c funciones.h utils.h pow.h
-	$(CC) -c $< 
+	$(CC) $(CFLAGS) -c $< 
 
 utils.o: utils.c utils.h
-	$(CC) -c $< 
+	$(CC) $(CFLAGS) -c $< 
 
 
 minero: minero.o funciones_minero.o pow.o utils.o
 	$(CC) -o $@ $^ $(LIBS)
 
 minero.o: minero.c funciones_minero.h pow.h utils.h
-	$(CC) -c $< 
+	$(CC) $(CFLAGS) -c $< 
 
 funciones_minero.o: funciones_minero.c funciones_minero.h pow.h utils.h
-	$(CC) -c $< 
+	$(CC) $(CFLAGS) -c $< 
 
 pow.o: pow.c pow.h
-	$(CC) -c $< 
+	$(CC) $(CFLAGS) -c $< 
 #----------------------------------------------------------------------------------------------------------------------------
 run_all: ./monitor 1000 ./monitor 500 ./minero 200 100  #Es posible que esto haga que se ejecuten en orden, no simultaneamente
 

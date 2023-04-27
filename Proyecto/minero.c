@@ -65,6 +65,11 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+#ifdef DEBUG
+    printf("Tengo %d hilos y soy %ld\n\n", n_threads, (long)getpid());
+    sleep(3);
+#endif
+
     /*Creación de la pipeline MIN->REG*/
     if (pipe(pipeMin_Reg) == -1)
         error("pipe creation");
@@ -86,7 +91,7 @@ int main(int argc, char *argv[])
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[0]); /*Lectura MIN->REG*/
         minero(n_threads, n_seconds, pid, pipeMin_Reg[1], mutex_nmin);
-        
+
         sem_close(mutex_nmin);
         wait(&st); /*Finalmente esperar al proceso Registrador e imprime un mensaje en caso de EXIT_FAILURE (de Registrador)*/
         if (WIFEXITED(st) == 0)
