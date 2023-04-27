@@ -30,30 +30,67 @@ pendientes si no hay un monitor activo.*/
 #include <sys/wait.h>
 #include <mqueue.h>
 
-#include "funciones_minero.h"
-#include "pow.h"
-#include "utils.h"
+#include "funciones_monitor.h"
 
 int monitor();
 int comprobador();
-/*
 #define SHM_NAME "/shm_name"
-#define NAME_SEM_CTRL "/semCTRL"*/
+#define NAME_SEM_CTRL "/semCTRL"
 
 int main()
 {
     sem_t *semCtrl;
     pid_t pid;
+    
+    if ((semCtrl = sem_open(NAME_SEM_CTRL, O_CREAT, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) /*Apertura de semáforo*/
+        error("sem_open SemCtrl");
+    
+    /*Petición a memoria compartida para que los procesos divergan*/
+    if ((fd = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) == ERROR)
+    {
+        if (errno == EEXIST)
+        {
+            if ((fd = shm_open(SHM_NAME, O_RDWR, 0)) == ERROR) /*Control de errores*/
+                error(" Error opening the shared memory segment ");
+            else /*Caso monitor*/
+            {
+#ifdef DEBUG
+                printf("Monitor %d\n", getpid());
+#endif
+                if (monitor(fd, lag, semCtrl) == ERROR)
+                    perror("Error in monitor");
+                /*Se desvinculan ambos recursos al ser nosotros los últimos en usarlos*/
+                shm_unlink(SHM_NAME);
+                sem_unlink(NAME_SEM_CTRL);
+            }
+        }
+        else /*Control de errores*/
+            error(" Error creating the shared memory segment ");
+    }
+    else /*Caso comprobador*/
+    {
+#ifdef DEBUG
+        printf("Comprobador %d\n", getpid());
+#endif
+        if (comprobador(fd, semCtrl) == ERROR)
+            error("Error in comprobador");
+    }
 
+    exit(EXIT_SUCCESS);
     switch (fork())
     {
     case -1:
         printf("ERRORES");
         break;
     case 0:
+        
         monitor();
         break;
     default:
+        if((fd = shm_open(SHM_NAME, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) == ERROR){
+             error(" Error opening the shared memory segment ");
+
+        }
         comprobador();
         break;
     }
@@ -62,7 +99,7 @@ int main()
 
     exit(EXIT_SUCCESS);
 }
-
+/*
 int comprobador()
 {
     int pid, fd;
@@ -72,10 +109,8 @@ int comprobador()
     mqd_t mq;
     int i;
 
-    /*Creará una cola de mensajes de capacidad SIZE*/
     attributes.mq_maxmsg = Q_SIZE;
     attributes.mq_msgsize = sizeof(Bloque);
-    /*Conexión a la cola de mensajes*/
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
         error(" mq_open en Monitor");
 
@@ -94,13 +129,14 @@ int comprobador()
             printf("\n\nComprobador dice que está mal\n");
         print_bloque(STDOUT_FILENO, &msg);
     }
-    /*Finalización*/
+   
     if (mq_close(mq) == ERROR)
         error("mq_close en monitor");
 
     if (mq_unlink(MQ_NAME) == ERROR)
         error("mq_unlink en monitor");
-}
+}*/
+/*
 int monitor(){
     return 0;
-}
+}*/
