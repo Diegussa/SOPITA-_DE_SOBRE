@@ -81,4 +81,4 @@ rs:
 	 rm /dev/mqueue/mqueue
 	
 kill:
-	ps -e | grep "minero" | cut -c-6 | xargs kill -9
+	ps -e | grep "minero" | cut -c-7 | xargs kill -9
