@@ -39,15 +39,15 @@ funciones_minero.o: funciones_minero.c funciones_minero.h pow.h utils.h
 pow.o: pow.c pow.h
 	$(CC) $(CFLAGS) -c $< 
 #----------------------------------------------------------------------------------------------------------------------------
-run_all1: ./monitor 1000 ./monitor 500 ./minero 200 100  #Es posible que esto haga que se ejecuten en orden, no simultaneamente
+run_all1: ./monitor  ./monitor  ./minero 200 100  #Es posible que esto haga que se ejecuten en orden, no simultaneamente
 
 run_mins3: 
-	./minero 12 4 & ./minero 8 5 & ./minero 15 8
+	./minero 12 4 & ./minero 8 5 & ./minero 15 8 &
 run_minsp1:
-	./minero 4 4 & ./minero 6 16 & ./minero 8 8
+	./minero 4 4 & ./minero 6 16 & ./minero 8 8 &
 
 run_mins10:
-	./minero 20 40 & ./minero 24 50 & ./minero 35 80 & ./minero 20 4 & ./minero 24 5 & ./minero 35 8 & ./minero 45 30 & ./minero 44 5 & ./minero 60 3 & ./minero 34 10
+	./minero 20 40 & ./minero 24 50 & ./minero 35 80 & ./minero 20 4 & ./minero 24 5 & ./minero 35 8 & ./minero 45 30 & ./minero 44 5 & ./minero 60 3 & ./minero 34 10 &
 
 run_mon:
 	./monitor
