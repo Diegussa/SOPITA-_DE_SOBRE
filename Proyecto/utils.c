@@ -9,11 +9,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <mqueue.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <string.h>
 #include <time.h>
 #include <fcntl.h>
+#include <semaphore.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
+#include <unistd.h>
+#include <pthread.h>
 #include <errno.h>
+
 
 #include "utils.h"
 
@@ -30,6 +41,46 @@ int down(sem_t *sem)
 int down_try(sem_t *sem)
 {
   return sem_trywait(sem);
+}
+
+
+/*Changes the handler of the specified signals*/
+STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *Signals, sigset_t *No_signals, void (*handler)(int))
+{
+    int i = 0;
+
+    sigemptyset(Signals);
+    sigfillset(No_signals);
+    for (i = 0; i < n_signals; i++)
+    {
+        if (sigaddset(Signals, sig[i]) == ERROR)
+            return ERROR;
+        if (sigdelset(No_signals, sig[i]) == ERROR)
+            return ERROR;
+    }
+
+    /*Block signals*/
+    if (sigprocmask(SIG_BLOCK, Signals, NULL) == ERROR)
+        return ERROR;
+
+    if(handler)
+        actSIG->sa_handler = handler;
+    else
+        actSIG->sa_handler = SIG_IGN;
+
+
+    /*Set the new signal handler*/
+    sigemptyset(&(actSIG->sa_mask));
+    actSIG->sa_flags = 0;
+
+    for (i = 0; i < n_signals; i++)
+        if (sigaction(sig[i], actSIG, NULL) == ERROR)
+            return ERROR;
+
+    /*Unblock signals*/
+    if (sigprocmask(SIG_UNBLOCK, Signals, NULL) == ERROR)
+        return ERROR;
+    return OK;
 }
 
 void print_bloque(int fd, Bloque *bloque)

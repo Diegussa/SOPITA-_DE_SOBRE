@@ -38,7 +38,6 @@ mineros y el monitor.*/
 
 #define SIZE 7 /*Debe ser menor o igual a 10*/
 #define MQ_NAME "/mqueue"
-#define SEM_NAME_MIN "/semMin"
 #define MAX_THREADS 100
 #define MAX_SECS 100
 

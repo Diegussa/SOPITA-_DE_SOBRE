@@ -20,6 +20,8 @@
 #define QUEUE_SIZE 6 /*Creo que pasa a 5*/
 #define N_SIZE 4
 
+#define N_SIGNALS_MON 1
+
 #define SIZE 7
 #define MQ_NAME "/mqueue"
 
@@ -36,9 +38,32 @@ struct _Shm_struct
     Bloque bloq[SIZE];
     int in, out, val[SIZE];
 }; /*!< Structure of the messages between Monitor and Comprobador*/
+volatile sig_atomic_t got_SIGINT = 0;
+
 /*Esto debería alojarse en utils ya que lo comparten minero y comprobador*/
 void monitor_print_block(Bloque *blq, int res);
 
+
+
+
+void _handler_monitor(int sig)
+{
+    switch (sig)
+    {
+
+    case SIGINT:
+#ifdef DEBUG
+        printf("\033[0;31m ME LLEGÓ Finalización\n");
+#endif
+        got_SIGINT = 1;
+        break;
+    default:
+#ifdef DEBUG
+        printf("SIGNAL UNKNOWN(%d) %ld\n", sig, (long)getpid());
+#endif
+        break;
+    }
+}
 /*Función privada que finaliza el programa Comprobador en caso de error, indicandoselo a Monitor*/
 STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems, STATUS retorno)
 {
@@ -66,16 +91,19 @@ STATUS _finish_comprobador(char *str, int fd_shm, Shm_struct *mapped, int n_sems
 #endif
     return retorno;
 }
-
 /*Hay que repasar esto pero tiene beuna pinta hay que cambiar Shm_struct por un bloque*/
 STATUS comprobador(int fd_shm, sem_t *semCtrl)
 {
     long obj, sol;
-    int res = 0; /*Index apunta a la primera direccción vacía*/
+    int res = 0, sig[N_SIGNALS_MON]={SIGINT}; /*Index apunta a la primera direccción vacía*/
     Shm_struct *mapped;
+    struct sigaction actSig;
+    sigset_t signals, no_sig;
     struct mq_attr attributes;
     mqd_t mq;
     Bloque msg;
+
+    set_handlers(sig,N_SIGNALS_MON,&actSig,&signals,&no_sig, _handler_monitor);
 
     /*Mapeará el segmento de memoria*/
     if (ftruncate(fd_shm, sizeof(Shm_struct)) == ERROR)
@@ -130,8 +158,9 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
 
     up(semCtrl); /*Indica a monitor que los semáforos ya están inicializados*/
     sem_close(semCtrl);
-    while (res != -1)
+    while (res != -1) 
     {
+        block_all_signal(&signals);
         /*Recepción del mensaje enviado por el Ganador*/
         if (mq_receive(mq, (char *)&msg, sizeof(Bloque), 0) == ERROR)
         {
@@ -156,7 +185,7 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
 #ifdef DEBUG
         printf("Comprueba %ld -> %ld: %ld\n", obj, sol, pow_hash(sol));
 #endif
-        if (msg.id == -1)
+        if (msg.id == -1 || got_SIGINT)
             res = -1;
         /*Se la trasladará al monitor a través de la memoria compartida*/
         down(&mapped->sem_vacio);
@@ -172,6 +201,9 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
 #endif
         up(&mapped->sem_mutex);
         up(&mapped->sem_lleno);
+         
+        sigprocmask(SIG_UNBLOCK, &signals, NULL);
+
     }
 #ifdef TEST
     nanorandsleep();
@@ -189,14 +221,19 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
 
 STATUS monitor(int fd_shm)
 {
-    int res; /*Index apunta a la primera direccción llena*/
+    int res,sig[N_SIGNALS_MON]={SIGINT}; /*Index apunta a la primera direccción llena*/
     Shm_struct *mapped;
     Bloque blq;
+    struct sigaction actSig;
+    sigset_t signals, no_signals;
     #ifdef DEBUG
 
     printf("[%d] Printing blocks...\n", getpid());
     #endif
+    
+    
 
+    set_handlers(sig,N_SIGNALS_MON,&actSig,&signals,&no_signals, NULL);
     /*Mapeará el segmento de memoria y cerrará el descriptor ya que tenemos un puntero a la "posición" de mamoria compartida*/
     if ((mapped = (Shm_struct *)mmap(NULL, sizeof(Shm_struct), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0)) == MAP_FAILED)
     {

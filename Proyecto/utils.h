@@ -152,7 +152,7 @@ void copy_block(Bloque *dest, Bloque *orig);
  * @return Returns 0 on succes, -1 on Error and more info in errno
  */
 void print_bloque(int fd, Bloque *bloque);
-
+STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *Signals, sigset_t *No_signals, void (*handler)(int));
 void copy_wallet(Wallet *dest, Wallet *orig);
 int wallet_get_coins(Wallet *wallet);
 void wallet_set_coins(Wallet *wallet, int coins);

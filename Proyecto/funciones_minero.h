@@ -14,6 +14,7 @@
 
 #define nameSemNmin "/semNmin"
 
+#define SEM_NAME_MIN "/semMin"
 
 void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutex,sem_t *semMon);
 
@@ -24,6 +25,5 @@ void *func_minero(void *arg);
 void ganador(System_info *sys, int obj, int sol, int proc_index, sem_t *mutexSysInfo,sem_t *SemMon, mqd_t mq);
 void perdedor(System_info *sys, sigset_t *oldmask, int index_proc);
 void _handler_minero(int sig);
-STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *oldmask1,sigset_t *oldmask, void (*handler)(int));
 
 #endif

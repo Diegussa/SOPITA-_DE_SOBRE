@@ -42,7 +42,7 @@ pow.o: pow.c pow.h
 run_all1: ./monitor  ./monitor  ./minero 200 100  #Es posible que esto haga que se ejecuten en orden, no simultaneamente
 
 run_mins3: 
-	./minero 12 4 & ./minero 8 5 & ./minero 15 8 &
+	./minero 12 4 & ./minero 18 5 & ./minero 15 8 &
 run_minsp1:
 	./minero 4 4 & ./minero 6 16 & ./minero 8 8 &
 
@@ -82,3 +82,5 @@ rs:
 	
 kill:
 	ps -e | grep "minero" | cut -c-7 | xargs kill -9
+kill2:
+	ps -e | grep "monitor" | cut -c-7 | xargs kill -9

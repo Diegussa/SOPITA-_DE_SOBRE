@@ -63,10 +63,8 @@ int main()
     down(semMin);
     sem_close(semMin);
     /*Se desvinculan todos los recursos al ser nosotros los últimos en usarlos*/
-    mq_unlink(MQ_NAME);
     shm_unlink(SHM_NAME2);
     sem_unlink(NAME_SEM_CTRL);
-    sem_unlink(SEM_NAME_MIN);
 
     exit(EXIT_SUCCESS);
 }

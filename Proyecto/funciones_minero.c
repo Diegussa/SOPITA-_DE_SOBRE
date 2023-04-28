@@ -23,6 +23,8 @@
 #define MAX POW_LIMIT - 1
 #define WAIT 10*MIL
 #define MAX_TRY 50
+#define N_SIGNALS_MIN 5
+
 
 int encontrado;
 
@@ -38,11 +40,10 @@ typedef struct
 void init_block(Bloque *b, Wallet *sys_Wallet, long id, long obj);
 int initMem(sem_t*sem,System_info **s_info);
 void error_minero(sem_t *sem,char *str, int handler, int pipe, mqd_t *mq, System_info **s_info, int proc_index);
-
 /*Si hay error se gestiona internamente y se realiza un exit()*/
 void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInfo, sem_t *semMon)
 {
-    int obj, sol = -1, proc_index, sig[5] = {SIGALRM, SIGUSR1, SIGTERM, SIGUSR2, SIGINT};
+    int obj, sol = -1, proc_index, sig[N_SIGNALS_MIN] = {SIGALRM, SIGUSR1, SIGTERM, SIGUSR2, SIGINT};
     System_info *s_info;
     struct sigaction actSIG;
     sigset_t MaskWithNoSignals, MaskWithSignals;
@@ -50,7 +51,7 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
     mqd_t mq;
 
     /*Cambio del manejador de señales*/
-    if (set_handlers(sig, 5, &actSIG, &MaskWithSignals, &MaskWithNoSignals, _handler_minero) == ERROR)
+    if (set_handlers(sig, N_SIGNALS_MIN, &actSIG, &MaskWithSignals, &MaskWithNoSignals, _handler_minero) == ERROR)
         error_minero(mutexSysInfo,"Error setting the new signal handler", NO_PARAMETER, NO_PARAMETER, NULL, NULL, NO_PARAMETER);
 #ifdef TEST
     nanorandsleep();
@@ -155,6 +156,8 @@ void minero(int n_threads, int n_secs, int pid, int PipeEscr, sem_t *mutexSysInf
         sem_destroy(&(s_info->primer_proc));
         sem_destroy(&(s_info->MutexBAct));
         shm_unlink(SHM_NAME);
+        mq_unlink(MQ_NAME);
+        sem_unlink(SEM_NAME_MIN);
         sem_unlink(nameSemNmin); /*Puede dar error en caso extremo de  que uno se una un par de líneas más arriba*/
     }
     else
@@ -360,40 +363,6 @@ void init_block(Bloque *b, Wallet *sys_Wallets, long id, long obj)
 
     for (i = 0; i < MAX_MINERS; i++)
         copy_wallet(&(b->Wallets[i]), &(sys_Wallets[i]));
-}
-
-/*Changes the handler of the specified signals*/
-STATUS set_handlers(int *sig, int n_signals, struct sigaction *actSIG, sigset_t *Signals, sigset_t *No_signals, void (*handler)(int))
-{
-    int i = 0;
-
-    sigemptyset(Signals);
-    sigfillset(No_signals);
-    for (i = 0; i < n_signals; i++)
-    {
-        if (sigaddset(Signals, sig[i]) == ERROR)
-            return ERROR;
-        if (sigdelset(No_signals, sig[i]) == ERROR)
-            return ERROR;
-    }
-
-    /*Block signals*/
-    if (sigprocmask(SIG_BLOCK, Signals, NULL) == ERROR)
-        return ERROR;
-
-    /*Set the new signal handler*/
-    actSIG->sa_handler = handler;
-    sigemptyset(&(actSIG->sa_mask));
-    actSIG->sa_flags = 0;
-
-    for (i = 0; i < n_signals; i++)
-        if (sigaction(sig[i], actSIG, NULL) == ERROR)
-            return ERROR;
-
-    /*Unblock signals*/
-    if (sigprocmask(SIG_UNBLOCK, Signals, NULL) == ERROR)
-        return ERROR;
-    return OK;
 }
 
 void _handler_minero(int sig)
