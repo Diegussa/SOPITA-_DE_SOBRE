@@ -43,21 +43,23 @@ run_all1: ./monitor 1000 ./monitor 500 ./minero 200 100  #Es posible que esto ha
 
 run_mins3: 
 	./minero 12 4 & ./minero 8 5 & ./minero 15 8
+run_minsp1:
+	./minero 4 4 & ./minero 6 16 & ./minero 8 8
 
 run_mins10:
 	./minero 20 40 & ./minero 24 50 & ./minero 35 80 & ./minero 20 4 & ./minero 24 5 & ./minero 35 8 & ./minero 45 30 & ./minero 44 5 & ./minero 60 3 & ./minero 34 10
 
 run_mon:
-	./monitor 100
+	./monitor
 
 run_monv:
-	valgrind --leak-check=full --show-leak-kinds=all ./monitor 100
+	valgrind --leak-check=full --show-leak-kinds=all ./monitor
 
 run_min:
 	./minero 10 5
 
-run_minv:
-	valgrind --leak-check=full --show-leak-kinds=all ./minero 20 100
+run_minv3:
+	valgrind --leak-check=full --show-leak-kinds=all ./minero 12 10 & valgrind --leak-check=full --show-leak-kinds=all ./minero 9 7  & valgrind --leak-check=full --show-leak-kinds=all ./minero 7 10 &
 #----------------------------------------------------------------------------------------------------------------------------
 clean:
 	rm -v monitor minero *.o
@@ -79,4 +81,4 @@ rs:
 	 rm /dev/mqueue/mqueue
 	
 kill:
-	ps -e | grep "minero" | cut -c-4 | xargs kill -9
+	ps -e | grep "minero" | cut -c-6 | xargs kill -9

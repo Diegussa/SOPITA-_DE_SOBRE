@@ -20,14 +20,20 @@
 
 #define SHM_NAME2 "/shm_name"
 #define NAME_SEM_CTRL "/semCTRL"
+#define SEM_NAME_MIN "/semMin"
 
 int main()
 {
     sem_t *semCtrl;
-    int fd, st;
+    sem_t *semMin;
+    int fd;
 
     if ((semCtrl = sem_open(NAME_SEM_CTRL, O_CREAT, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) /*Apertura de semáforo*/
         error("sem_open SemCtrl");
+
+    if((semMin =  sem_open(SEM_NAME_MIN, O_CREAT, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED){
+        error("sem_open semMMin");
+    }
 
     switch (fork())
     {
@@ -45,23 +51,22 @@ int main()
         exit(EXIT_SUCCESS);
         break;
 
-    default: /*Comporobador*/
+    default: /*Comprobador*/
         if ((fd = shm_open(SHM_NAME2, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR)) == ERROR)
             error(" Error opening the shared memory segment ");
-
+        up(semMin);
         if (comprobador(fd, semCtrl) == ERROR)
             error("Error in comprobador");
         break;
     }
 
-
-    
-    
-    /*Se desvinculan ambos recursos al ser nosotros los últimos en usarlos*/
-
+    down(semMin);
+    sem_close(semMin);
+    /*Se desvinculan todos los recursos al ser nosotros los últimos en usarlos*/
     mq_unlink(MQ_NAME);
     shm_unlink(SHM_NAME2);
     sem_unlink(NAME_SEM_CTRL);
+    sem_unlink(SEM_NAME_MIN);
 
     exit(EXIT_SUCCESS);
 }

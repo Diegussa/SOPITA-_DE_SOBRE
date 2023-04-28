@@ -33,8 +33,8 @@ typedef enum
 struct _Shm_struct
 {
     sem_t sem_vacio, sem_mutex, sem_lleno;
-    Bloque bloq[QUEUE_SIZE];
-    int in, out, val[QUEUE_SIZE];
+    Bloque bloq[SIZE];
+    int in, out, val[SIZE];
 }; /*!< Structure of the messages between Monitor and Comprobador*/
 /*Esto debería alojarse en utils ya que lo comparten minero y comprobador*/
 void monitor_print_block(Bloque *blq, int res);
@@ -85,6 +85,9 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
     printf("[%d] Checking blocks...\n", getpid());
     printf("Pasa ftruncate %d\n", getpid());
 #endif
+#ifdef TEST
+    nanorandsleep();
+#endif
 
     if ((mapped = (Shm_struct *)mmap(NULL, sizeof(Shm_struct), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0)) == MAP_FAILED)
         return _finish_comprobador("mmap", fd_shm, NULL, 0, ERROR);
@@ -114,20 +117,21 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
 #ifdef DEBUG
     printf("Semáforos inicializados %d\n", getpid());
 #endif
-    up(semCtrl); /*Indica a comprobador que los semáforos ya están inicializados*/
-    sem_close(semCtrl);
+    
 
     attributes.mq_maxmsg = SIZE;
     attributes.mq_msgsize = sizeof(Bloque);
+
 #ifdef TEST
     nanorandsleep();
 #endif
     if ((mq = mq_open(MQ_NAME, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR, &attributes)) == (mqd_t)ERROR)
         return _finish_comprobador("Open mq en comprobador", 0, mapped, 3, ERROR);
 
+    up(semCtrl); /*Indica a monitor que los semáforos ya están inicializados*/
+    sem_close(semCtrl);
     while (res != -1)
     {
-        printf("Receiving\n");
         /*Recepción del mensaje enviado por el Ganador*/
         if (mq_receive(mq, (char *)&msg, sizeof(Bloque), 0) == ERROR)
         {
@@ -136,7 +140,7 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
             /*Insertar fin de ejecución*/
             mapped->val[mapped->in] = -1;
             copy_block(&(mapped->bloq[mapped->in]), &msg);
-            mapped->in = (mapped->in + 1) % QUEUE_SIZE;
+            mapped->in = (mapped->in + 1) % SIZE;
 
             up(&mapped->sem_mutex);
             up(&mapped->sem_lleno);
@@ -162,7 +166,7 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
 #endif
         mapped->val[mapped->in] = res;
         copy_block(&(mapped->bloq[mapped->in]), &msg);
-        mapped->in = (mapped->in + 1) % QUEUE_SIZE;
+        mapped->in = (mapped->in + 1) % SIZE;
 #ifdef TEST
         nanorandsleep();
 #endif
@@ -176,8 +180,10 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
     printf("FIN \n");
 #endif
     /*Liberación de recursos y fin*/
-    printf("[%d] Finishing...\n", getpid());
+    #ifdef DEBUG
 
+    printf("[%d] Finishing comprobador...\n", getpid());
+    #endif
     return _finish_comprobador(NULL, fd_shm, mapped, 3, OK);
 }
 
@@ -186,8 +192,10 @@ STATUS monitor(int fd_shm)
     int res; /*Index apunta a la primera direccción llena*/
     Shm_struct *mapped;
     Bloque blq;
+    #ifdef DEBUG
 
     printf("[%d] Printing blocks...\n", getpid());
+    #endif
 
     /*Mapeará el segmento de memoria y cerrará el descriptor ya que tenemos un puntero a la "posición" de mamoria compartida*/
     if ((mapped = (Shm_struct *)mmap(NULL, sizeof(Shm_struct), PROT_READ | PROT_WRITE, MAP_SHARED, fd_shm, 0)) == MAP_FAILED)
@@ -209,7 +217,7 @@ STATUS monitor(int fd_shm)
 #endif
         copy_block(&blq, &(mapped->bloq[mapped->out]));
         res = mapped->val[mapped->out];
-        mapped->out = (mapped->out + 1) % QUEUE_SIZE;
+        mapped->out = (mapped->out + 1) % SIZE;
 #ifdef TEST
         nanorandsleep();
 #endif
@@ -219,8 +227,9 @@ STATUS monitor(int fd_shm)
         /*Impresión por pantalla del resultado*/
         monitor_print_block(&blq, res);
     }
-    printf("[%d] Finishing...\n", getpid());
-
+    #ifdef DEBUG
+    printf("[%d] Finishing monitor...\n", getpid());
+    #endif
     /*Liberación de recursos y fin. Cerramos los recursos abiertos ya que nosotros somos los últimos en usarlos*/
 
     munmap(mapped, sizeof(Shm_struct));

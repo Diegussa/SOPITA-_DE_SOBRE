@@ -172,8 +172,8 @@ void send_signals_miners(Wallet * w, int no_index, int signal){
     {
         if (wallet_get_pid(&(w[i])) != 0 && no_index != i )
         {
-            if(kill(wallet_get_pid(&(w[i])), signal)==ERROR)
-                perror("Error sending signal");
+            kill(wallet_get_pid(&(w[i])), signal);
+                /*perror("Error sending signal");*/
         }
     }
 }

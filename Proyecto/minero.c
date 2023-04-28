@@ -38,6 +38,7 @@ mineros y el monitor.*/
 
 #define SIZE 7 /*Debe ser menor o igual a 10*/
 #define MQ_NAME "/mqueue"
+#define SEM_NAME_MIN "/semMin"
 #define MAX_THREADS 100
 #define MAX_SECS 100
 
@@ -47,6 +48,7 @@ int main(int argc, char *argv[])
 {
     int n_seconds, n_threads, pid, st, pipeMin_Reg[2]; /*Indica la posición a insertar el siguiente mensaje en el array msg*/
     sem_t *mutex_nmin;
+    sem_t *semMon;
 
     if (argc != 3) /*Control de parámetros de entrada*/
     {
@@ -72,6 +74,8 @@ int main(int argc, char *argv[])
     /*Creación de semáforos*/
     if ((mutex_nmin = sem_open(nameSemNmin, O_CREAT, S_IRUSR | S_IWUSR, 1)) == SEM_FAILED)
         error("Error openning sem");
+     if (( semMon = sem_open(SEM_NAME_MIN, O_CREAT, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED)
+        error("Error openning sem");
 
     /*Creación del proceso Registrador*/
     if ((pid = fork()) == -1)
@@ -85,7 +89,7 @@ int main(int argc, char *argv[])
 
         /*Cierro los ficheros que no vamos a usar*/
         close(pipeMin_Reg[0]); /*Lectura MIN->REG*/
-        minero(n_threads, n_seconds, pid, pipeMin_Reg[1], mutex_nmin);
+        minero(n_threads, n_seconds, pid, pipeMin_Reg[1], mutex_nmin ,semMon);
 
         sem_close(mutex_nmin);
         wait(&st); /*Finalmente esperar al proceso Registrador e imprime un mensaje en caso de EXIT_FAILURE (de Registrador)*/

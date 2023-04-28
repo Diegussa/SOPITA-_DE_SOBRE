@@ -41,7 +41,8 @@
 #define MQ_NAME "/mqueue"
 #define Q_SIZE 5
 
-#define TESTS
+#define TEST
+/*#define DEBUG*/
 
 typedef struct
 {
