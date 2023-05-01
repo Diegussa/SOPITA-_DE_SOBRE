@@ -221,7 +221,7 @@ STATUS comprobador(int fd_shm, sem_t *semCtrl)
 
 STATUS monitor(int fd_shm)
 {
-    int res,sig[N_SIGNALS_MON]={SIGINT}; /*Index apunta a la primera direccción llena*/
+    int res,sig[N_SIGNALS_MON]={SIGINT};
     Shm_struct *mapped;
     Bloque blq;
     struct sigaction actSig;

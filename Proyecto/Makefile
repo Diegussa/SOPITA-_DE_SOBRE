@@ -47,7 +47,7 @@ run_minsp1:
 	./minero 4 4 & ./minero 6 16 & ./minero 8 8 &
 
 run_mins10:
-	./minero 20 40 & ./minero 24 50 & ./minero 35 80 & ./minero 20 4 & ./minero 24 5 & ./minero 35 8 & ./minero 45 30 & ./minero 44 5 & ./minero 60 3 & ./minero 34 10 &
+	./minero 10 40 & ./minero 14 50 & ./minero 15 80 & ./minero 6 4 & ./minero 4 5 & ./minero 15 8 & ./minero 12 30 & ./minero 2 5 & ./minero 6 3 & ./minero 9 10 &
 
 run_mon:
 	./monitor

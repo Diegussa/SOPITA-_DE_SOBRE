@@ -322,6 +322,15 @@ void registrador(int PipeLect)
     int nbytes = 1, fd;
     Bloque bloque;
     char Filename[WORD_SIZE];
+    int sig[1]={SIGINT}; 
+    struct sigaction actSig;
+    sigset_t signals, no_signals;
+    #ifdef DEBUG
+
+    printf("[%d] Printing blocks...\n", getpid());
+    #endif
+    /*Ignoring sigint*/
+    set_handlers(sig,1,&actSig,&signals,&no_signals, NULL);
 
     sprintf(Filename, "reg%d.dat", getppid());
 
@@ -368,10 +377,14 @@ void init_block(Bloque *b, Wallet *sys_Wallets, long id, long obj)
 void _handler_minero(int sig)
 {
     switch (sig)
-    {
+    { 
+    case SIGINT:
+    #ifdef DEBUG
+        printf("\033[0;31m ME LLEGÓ SIGINT \n");
+#endif
     case SIGALRM:
     case SIGTERM:
-    case SIGINT:
+
 #ifdef DEBUG
         printf("\033[0;31m ME LLEGÓ Finalización\n");
 #endif
