@@ -21,7 +21,7 @@
 #define INIC 0
 #define MAX_THREADS 100
 #define MAX POW_LIMIT - 1
-#define WAIT 10*MIL
+#define WAIT MIL*MIL
 #define MAX_TRY 50
 #define N_SIGNALS_MIN 5
 
